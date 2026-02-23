@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Plus } from 'lucide-react';
 
 // Interface untuk Props Modal
@@ -10,7 +10,7 @@ interface FormPermohonanModalProps {
 }
 
 export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanModalProps) {
-  // State untuk menyimpan data form
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     namaSurveyor: '',
     email: '',
@@ -27,6 +27,20 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
     keteranganVisit: '',
     ttdDigital: null as File | null,
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      const userRaw = localStorage.getItem('user');
+      if (userRaw) {
+        const User = JSON.parse(userRaw);
+        setFormData((prev) => ({
+          ...prev,
+          namaSurveyor: User.nama || '',
+          email: User.email || '',
+        }));
+      }
+    }
+  }, [isOpen]);
 
   // Handler jika modal sedang tertutup
   if (!isOpen) return null;
@@ -51,15 +65,39 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
   };
 
   // Handler Submit
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Di sini kamu bisa memanggil API untuk menyimpan ke database.
-    // Data lokasi dan keperluan sudah otomatis uppercase di state.
-    console.log("Data siap dikirim ke database:", formData);
-    
-    alert("Permohonan berhasil disimpan!");
-    onClose(); // Tutup modal setelah submit
+    setLoading(true);
+
+    try {
+      const User = JSON.parse(localStorage.getItem('user') || '{}');
+
+      const dataToSubmit = new FormData();
+      dataToSubmit.append('userId', User.id);
+
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== null) dataToSubmit.append(key, value);
+      });
+
+      const res = fetch('/api/pds', {
+        method: 'POST',
+        body: dataToSubmit
+      });
+
+      const result = await res.then((response) => response.json());
+
+      if (result.success) {
+        alert("Permohonan berhasil disimpan!");
+        onClose();
+        window.location.reload();
+      } else {
+        alert("Gagal menyimpan permohonan. Silakan coba lagi." + (result.error));
+      }
+    } catch (error) {
+        alert("Terjadi kesalahan saat menyimpan permohonan. Pastikan server dan database berjalan dengan baik.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,22 +123,16 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Nama Surveyor */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-gray-800">Nama Surveyor</label>
-              <input 
-                type="text" name="namaSurveyor" value={formData.namaSurveyor} onChange={handleChange}
-                className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            {/* Email */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-gray-800">Email</label>
-              <input 
-                type="email" name="email" value={formData.email} onChange={handleChange}
-                className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
-              />
+            {/* Nama Surveyor & Email */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-800 uppercase">Surveyor</label>
+                <input type="text" value={formData.namaSurveyor} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-800 uppercase">Email</label>
+                <input type="text" value={formData.email} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" />
+              </div>
             </div>
 
             {/* Permohonan */}
@@ -112,8 +144,8 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               >
                 <option value="">Pilih satu</option>
                 <option value="PDS">PDS</option>
-                <option value="Lembur">Lembur</option>
-                <option value="Transportasi">Transportasi</option>
+                <option value="Lembur">LEMBUR</option>
+                <option value="Transportasi">TRANSPORTASI</option>
               </select>
             </div>
 
@@ -237,9 +269,10 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
             {/* Tombol Kirim */}
             <button 
               type="submit"
-              className="w-24 bg-[#0A8E9A] hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+              disabled={loading}
+              className={`w-24 bg-[#0A8E9A] text-white font-bold py-2 px-4 rounded-md transition-all ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-teal-700'}`}
             >
-              Kirim
+              {loading ? '...' : 'Kirim'}
             </button>
 
           </form>
