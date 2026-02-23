@@ -63,7 +63,7 @@ export default function Sidebar() {
               </a>
               
               <a 
-                href="/riwayat-pds" 
+                href="/pds/riwayat" 
                 className="flex items-center gap-3 px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
               >
                 <div className="w-2 h-2 rounded-full bg-gray-800"></div>
