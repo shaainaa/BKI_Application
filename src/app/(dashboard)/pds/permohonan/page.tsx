@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, FileText, Edit, Calendar, ChevronDown, Search, AlignJustify } from 'lucide-react';
-import FormPermohonanModal from '../form_pds/page';
+import FormPermohonanModal from './form_pds/page';
 
 export default function PermohonanPDS() {
   // State untuk pop-up form
