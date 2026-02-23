@@ -18,7 +18,7 @@ export default function PermohonanPDS() {
   const [isKeperluanOpen, setIsKeperluanOpen] = useState(false);
   const [keperluanSearch, setKeperluanSearch] = useState('');
 
-  // Contoh data opsi untuk checkbox filter
+  // data opsi untuk checkbox filter
   const opsiLokasi = ['LAUT JAWA', 'LAUT BANDA', 'SELAT SUNDA', 'JAKARTA PORT', 'SURABAYA PORT'];
   const opsiKeperluan = ['TRAINING LEAD', 'INSPECTION', 'SURVEY KAPAL', 'AUDIT TAHUNAN'];
 
@@ -35,6 +35,15 @@ export default function PermohonanPDS() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- LOGIKA PERHITUNGAN SUMMARY CARD ---
+  // Menghitung jumlah masing-masing status dari isi tableData
+  const summaryData = {
+    totalPermohonan: tableData.length,
+    menungguPersetujuan: tableData.filter((item) => item.status === 'Proses').length,
+    uploadBukti: tableData.filter((item) => item.status === 'Upload Bukti').length,
+    selesai: tableData.filter((item) => item.status === 'Selesai').length,
+  };
+
   return (
     <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans">
       
@@ -49,7 +58,8 @@ export default function PermohonanPDS() {
           </div>
           <div>
             <p className="text-xs text-gray-600 font-semibold">Total Permohonan</p>
-            <p className="text-xl font-bold text-gray-900">10</p>
+            {/* Angka dinamis dari summaryData */}
+            <p className="text-xl font-bold text-gray-900">{summaryData.totalPermohonan}</p>
           </div>
         </div>
         <div className="bg-orange-50 p-4 rounded-xl flex items-center gap-4 border border-orange-100">
@@ -58,7 +68,8 @@ export default function PermohonanPDS() {
           </div>
           <div>
             <p className="text-xs text-gray-600 font-semibold">Menunggu Persetujuan</p>
-            <p className="text-xl font-bold text-gray-900">4</p>
+            {/* Angka dinamis dari summaryData */}
+            <p className="text-xl font-bold text-gray-900">{summaryData.menungguPersetujuan}</p>
           </div>
         </div>
         <div className="bg-purple-50 p-4 rounded-xl flex items-center gap-4 border border-purple-100">
@@ -67,7 +78,8 @@ export default function PermohonanPDS() {
           </div>
           <div>
             <p className="text-xs text-gray-600 font-semibold">Upload Bukti</p>
-            <p className="text-xl font-bold text-gray-900">8</p>
+            {/* Angka dinamis dari summaryData */}
+            <p className="text-xl font-bold text-gray-900">{summaryData.uploadBukti}</p>
           </div>
         </div>
         <div className="bg-green-50 p-4 rounded-xl flex items-center gap-4 border border-green-100">
@@ -76,7 +88,8 @@ export default function PermohonanPDS() {
           </div>
           <div>
             <p className="text-xs text-gray-600 font-semibold">Selesai</p>
-            <p className="text-xl font-bold text-gray-900">2</p>
+            {/* Angka dinamis dari summaryData */}
+            <p className="text-xl font-bold text-gray-900">{summaryData.selesai}</p>
           </div>
         </div>
       </div>

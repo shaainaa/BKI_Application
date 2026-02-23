@@ -55,7 +55,7 @@ export default function Sidebar() {
           {isPdsOpen && (
             <div className="ml-8 mt-2 space-y-1">
               <a 
-                href="/permohonan-pds" 
+                href="/pds/permohonan" 
                 className="flex items-center gap-3 px-2 py-2 text-sm font-bold text-[#0A8E9A]"
               >
                 <div className="w-2 h-2 rounded-full bg-[#0A8E9A]"></div>
