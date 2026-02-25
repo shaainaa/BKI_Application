@@ -1,204 +1,163 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { CreditCard, CheckCircle, ChevronDown } from "lucide-react";
 import {
-  Home,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Calendar,
-  Edit,
-  AlignJustify,
-  User,
-} from 'lucide-react';
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-// --- Interfaces ---
-interface TableData {
-  id: number;
-  tanggal: string;
-  lokasi: string;
-  permohonan: string;
-  keperluan: string;
-  status: 'Proses' | 'Upload Bukti' | 'Selesai';
-}
-
-// --- Mock Data ---
-const tableDataMock: TableData[] = [
-  { id: 1, tanggal: '02/02/2026', lokasi: 'LAUT JAWA', permohonan: 'PDS', keperluan: 'TRAINING LE...', status: 'Proses' },
-  { id: 2, tanggal: '02/02/2026', lokasi: 'LAUT JAWA', permohonan: 'PDS', keperluan: 'TRAINING LE...', status: 'Upload Bukti' },
-  { id: 3, tanggal: '02/02/2026', lokasi: 'LAUT JAWA', permohonan: 'PDS', keperluan: 'TRAINING LE...', status: 'Selesai' },
+// --- DATA DUMMY UNTUK GRAFIK ---
+const dataGrafik = [
+  { name: "JAN", total: 10000 },
+  { name: "FEB", total: 15000 },
+  { name: "MAR", total: 35000 },
+  { name: "APR", total: 55000 },
+  { name: "MEI", total: 65000 },
+  { name: "JUNI", total: 45000 },
+  { name: "JULI", total: 15000 },
+  { name: "AGS", total: 25000 },
+  { name: "SEP", total: 50000 },
+  { name: "OKT", total: 70000 },
+  { name: "NOV", total: 85000 },
+  { name: "DES", total: 100000 },
 ];
 
-export default function PermohonanPDS() {
-  // State untuk dropdown sidebar
-  const [isPdsOpen, setIsPdsOpen] = useState<boolean>(true);
+// --- DATA DUMMY UNTUK AKTIVITAS ---
+const aktivitasTerbaru = [
+  { id: 1, tipe: "pembayaran", judul: "Pembayaran PDS 92A-2025", status: "Telah dilakukan" },
+  { id: 2, tipe: "pembayaran", judul: "Pembayaran PDS 92A-2025", status: "Telah dilakukan" },
+  { id: 3, tipe: "pembayaran", judul: "Pembayaran PDS 92A-2025", status: "Telah dilakukan" },
+  { id: 4, tipe: "persetujuan", judul: "Permohonan PDS 333B-2025", status: "Telah disetujui" },
+];
 
-  // Fungsi handler untuk upload file
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validasi tambahan bisa dilakukan di sini
-      alert(`File "${file.name}" dipilih untuk ${documentType}. \nTipe: ${file.type}`);
+export default function Dashboard() {
+  const [namaUser, setNamaUser] = useState<string>("");
+
+  // Ambil user dari localStorage saat component mount
+  useEffect(() => {
+    const userString = localStorage.getItem("user");
+
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        setNamaUser(user.nama);
+      } catch (error) {
+        console.error("Gagal membaca data user:", error);
+      }
     }
-  };
+  }, []);
 
-  const renderStatusBadge = (status: TableData['status']) => {
-    switch (status) {
-      case 'Proses':
-        return <span className="px-3 py-1 bg-red-300 text-red-900 rounded-md font-semibold text-sm">Proses</span>;
-      case 'Upload Bukti':
-        return <span className="px-3 py-1 bg-yellow-200 text-yellow-900 rounded-md font-semibold text-sm">Upload Bukti</span>;
-      case 'Selesai':
-        return <span className="px-3 py-1 bg-green-300 text-green-900 rounded-md font-semibold text-sm">Selesai</span>;
-      default:
-        return null;
-    }
+  const formatYAxis = (tickItem: number) => {
+    if (tickItem === 0) return "0";
+    return `${tickItem / 1000}k`;
   };
-
-  // Komponen Reusable untuk Kolom Upload
-  const UploadAction = ({ label }: { label: string }) => (
-    <div className="flex items-center gap-2">
-      <button className="text-gray-400 hover:text-gray-600 bg-gray-200 p-1 rounded">
-        <AlignJustify size={16} />
-      </button>
-      <label className="cursor-pointer text-white bg-blue-500 hover:bg-blue-600 p-1 rounded flex items-center justify-center">
-        <Edit size={16} />
-        {/* Input file disembunyikan, hanya menerima jpg dan pdf */}
-        <input 
-          type="file" 
-          accept=".jpg, .jpeg, .pdf" 
-          className="hidden" 
-          onChange={(e) => handleFileUpload(e, label)} 
-        />
-      </label>
-    </div>
-  );
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans text-[#1F2937]">
+      
+      {/* Sapaan User Dinamis */}
+      <h1 className="text-4xl font-bold mb-8">
+        Selamat datang, {namaUser || "User"}!
+      </h1>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto p-8">
-          <h1 className="text-4xl font-bold text-[#1F2937] mb-6">Permohonan PDS</h1>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-pink-50 p-4 rounded-xl flex items-center gap-4">
-              <div className="p-3 bg-pink-200 rounded-full text-pink-600">
-                <FileText size={20} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 font-semibold">Total Permohonan</p>
-                <p className="text-xl font-bold text-gray-900">10</p>
-              </div>
-            </div>
-            <div className="bg-orange-50 p-4 rounded-xl flex items-center gap-4">
-              <div className="p-3 bg-orange-200 rounded-full text-orange-600">
-                <FileText size={20} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 font-semibold">Menunggu Persetujuan</p>
-                <p className="text-xl font-bold text-gray-900">4</p>
-              </div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-xl flex items-center gap-4">
-              <div className="p-3 bg-purple-200 rounded-full text-purple-600">
-                <Edit size={20} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 font-semibold">Upload Bukti</p>
-                <p className="text-xl font-bold text-gray-900">8</p>
-              </div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-xl flex items-center gap-4">
-              <div className="p-3 bg-green-200 rounded-full text-green-600">
-                <FileText size={20} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 font-semibold">Selesai</p>
-                <p className="text-xl font-bold text-gray-900">2</p>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* --- GRAFIK --- */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold">Nominal PDS Per Bulan</h2>
+            <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
+              Bulan <ChevronDown size={16} />
+            </button>
           </div>
 
-          {/* Action Button */}
-          <button className="bg-[#0A8E9A] hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center gap-2 font-medium mb-6">
-            <Plus size={18} />
-            Buat Permohonan
-          </button>
+          <div className="w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dataGrafik} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818CF8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#818CF8" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
 
-          {/* Filters */}
-          <div className="bg-white p-4 rounded-t-xl border border-gray-200">
-            <p className="text-sm font-bold text-gray-700 mb-3">Filter</p>
-            <div className="grid grid-cols-5 gap-4">
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500">
-                <option>Status</option>
-              </select>
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500">
-                <option>Lokasi</option>
-              </select>
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500">
-                <option>Permohonan</option>
-              </select>
-              <div className="relative">
-                <input type="text" placeholder="Tanggal" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500" />
-                <Calendar size={16} className="absolute right-3 top-2.5 text-gray-400" />
-              </div>
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500">
-                <option>Keperluan</option>
-              </select>
-            </div>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                  dy={10}
+                />
+
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                  tickFormatter={formatYAxis}
+                />
+
+                <Tooltip
+                  formatter={(value: any) =>
+                    new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(Number(value))
+                  }
+                  labelStyle={{ color: "#374151", fontWeight: "bold" }}
+                />
+
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#6366F1"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorTotal)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-
-          {/* Table Container - Horizontal Scroll Enabled */}
-          <div className="bg-white border-x border-b border-gray-200 overflow-x-auto whitespace-nowrap pb-4">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#B9C6D3] text-gray-800 text-sm">
-                  <th className="py-3 px-6 font-semibold">Tanggal</th>
-                  <th className="py-3 px-6 font-semibold">Lokasi</th>
-                  <th className="py-3 px-6 font-semibold">Permohonan</th>
-                  <th className="py-3 px-6 font-semibold">Keperluan</th>
-                  <th className="py-3 px-6 font-semibold text-center">Status</th>
-                  <th className="py-3 px-6 font-semibold">Bukti Survey</th>
-                  <th className="py-3 px-6 font-semibold">Bukti Transportasi</th>
-                  <th className="py-3 px-6 font-semibold">Boarding Pass</th>
-                  <th className="py-3 px-6 font-semibold">Bukti Lainnya</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableDataMock.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 text-sm text-gray-800 font-medium">
-                    <td className="py-4 px-6">{row.tanggal}</td>
-                    <td className="py-4 px-6">{row.lokasi}</td>
-                    <td className="py-4 px-6">{row.permohonan}</td>
-                    <td className="py-4 px-6">{row.keperluan}</td>
-                    <td className="py-4 px-6 text-center">{renderStatusBadge(row.status)}</td>
-                    <td className="py-4 px-6"><UploadAction label="Bukti Survey" /></td>
-                    <td className="py-4 px-6"><UploadAction label="Bukti Transportasi" /></td>
-                    <td className="py-4 px-6"><UploadAction label="Boarding Pass" /></td>
-                    <td className="py-4 px-6"><UploadAction label="Bukti Lainnya" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="bg-white px-6 py-4 border-t border-gray-200 rounded-b-xl flex items-center justify-between">
-            <p className="text-sm text-gray-500">Menampilkan 1 sampai {tableDataMock.length} dari {tableDataMock.length}</p>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-sm hover:bg-gray-300 font-medium">&lt; Back</button>
-              <button className="px-3 py-1 bg-[#0A8E9A] text-white rounded text-sm font-medium">1</button>
-              <button className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-sm hover:bg-gray-300 font-medium">Next &gt;</button>
-            </div>
-          </div>
-
         </div>
-      </main>
+
+        {/* --- AKTIVITAS --- */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h2 className="text-lg font-bold mb-6">Aktivitas Terbaru</h2>
+
+          <div className="space-y-5">
+            {aktivitasTerbaru.map((item) => (
+              <div key={item.id} className="flex items-center gap-4">
+                <div
+                  className={`p-3 rounded-xl flex items-center justify-center ${
+                    item.tipe === "pembayaran"
+                      ? "bg-[#A7F3D0] text-[#047857]"
+                      : "bg-[#FDE68A] text-[#D97706]"
+                  }`}
+                >
+                  {item.tipe === "pembayaran" ? (
+                    <CreditCard size={24} />
+                  ) : (
+                    <CheckCircle size={24} />
+                  )}
+                </div>
+
+                <div>
+                  <p className="font-bold text-sm text-gray-800">{item.judul}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{item.status}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
