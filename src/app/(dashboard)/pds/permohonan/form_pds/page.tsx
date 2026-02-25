@@ -71,30 +71,40 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
 
     try {
       const User = JSON.parse(localStorage.getItem('user') || '{}');
-
       const dataToSubmit = new FormData();
+
       dataToSubmit.append('userId', User.id);
+      dataToSubmit.append('permohonan', formData.permohonan);
+      dataToSubmit.append('lokasi', formData.lokasi);
+      dataToSubmit.append('keperluan', formData.keperluan);
+      dataToSubmit.append('noAgenda', formData.nomorAgenda);
+      dataToSubmit.append('tglBerangkat', formData.keberangkatan);
+      dataToSubmit.append('jamBerangkat', formData.jamBerangkat);
+      dataToSubmit.append('tglKembali', formData.kembali);
+      dataToSubmit.append('jamKembali', formData.jamKembali);
+      dataToSubmit.append('visitKe', formData.visitKe);
+      dataToSubmit.append('keteranganVisit', formData.keteranganVisit);
 
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null) dataToSubmit.append(key, value);
-      });
+      if (formData.ttdDigital) {
+        dataToSubmit.append('ttdDigitalUrl', formData.ttdDigital);
+      }
 
-      const res = fetch('/api/pds', {
+      const res = await fetch('/api/pds', {
         method: 'POST',
         body: dataToSubmit
       });
 
-      const result = await res.then((response) => response.json());
+      const result = await res.json();
 
       if (result.success) {
         alert("Permohonan berhasil disimpan!");
         onClose();
         window.location.reload();
       } else {
-        alert("Gagal menyimpan permohonan. Silakan coba lagi." + (result.error));
+        alert("Gagal:" + (result.message ||result.error));
       }
     } catch (error) {
-        alert("Terjadi kesalahan saat menyimpan permohonan. Pastikan server dan database berjalan dengan baik.");
+      alert("Terjadi Kesalah koneksi database");
     } finally {
       setLoading(false);
     }
