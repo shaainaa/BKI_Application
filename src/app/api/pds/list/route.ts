@@ -1,5 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import Pds from '@/models/Pds';
+import User from '@/models/User';
+
+// Penting: Pastikan relasi sudah didefinisikan sebelum query ini dipanggil
+// Biasanya diletakkan di file models/index.ts atau di awal aplikasi
+Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,14 +15,21 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Unauthorized'}, { status: 401});
     }
 
-
     const listPds = await Pds.findAll({
         where: { userId: userId },
-        order: [['tanggalPengajuan', 'DESC']]
+        include: [
+            {
+                model: User,
+                as: 'user', // Nama alias harus sama dengan yang di-define di belongsTo
+                attributes: ['nama', 'email'], // Ambil kolom nama saja (atau email jika perlu)
+            }
+        ],
+        order: [['tanggalPengajuan', 'DESC']],
     });
 
     return NextResponse.json({ success: true, data: listPds });
-  } catch (error:any) {
+  } catch (error: any) {
+    console.error("Error fetching PDS with User:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

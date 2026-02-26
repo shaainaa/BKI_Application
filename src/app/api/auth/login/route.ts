@@ -1,18 +1,27 @@
 import User from '@/models/User';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const { username, password } = await req.json();
+  try {
+    const { username, password } = await req.json();
 
-  // Sequelize akan mencari ke tabel 'user' yang sudah ada di MySQL
-  const user = await User.findOne({ 
-    where: { 
-      username: username,
-      password: password 
-    } 
-  });
+    const user = await User.findOne({ 
+      where: { username, password } 
+    }) as any;
 
-  if (user) {
-    return Response.json({ success: true, user });
+    if (user) {
+      return NextResponse.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          nama: user.nama,
+          email: user.email,
+          role: user.role // Kirimkan role (ADMIN/SURVEYOR) ke frontend
+        } 
+      });
+    }
+    return NextResponse.json({ success: false, message: "Username atau Password salah" }, { status: 401 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
-  return Response.json({ success: false, message: "User tidak ditemukan atau password salah" }, { status: 401 });
 }

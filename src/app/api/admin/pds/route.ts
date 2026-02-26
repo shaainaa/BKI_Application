@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Pds from '@/models/Pds';
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, status } = await req.json();
+
+    if (!id || !status) {
+      return NextResponse.json({ success: false, message: "ID dan Status wajib diisi" }, { status: 400 });
+    }
+
+    // Update status di database (PENDING -> APPROVED / COMPLETED)
+    const updatedPds = await Pds.update(
+      { status: status },
+      { where: { id: id } }
+    );
+
+    if (updatedPds[0] === 0) {
+      return NextResponse.json({ success: false, message: "Data tidak ditemukan" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: `Status berhasil diubah menjadi ${status}` });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// API untuk mengambil SEMUA data PDS (Monitoring Admin)
+export async function GET() {
+  try {
+    const allPds = await Pds.findAll({
+      order: [['tanggalPengajuan', 'DESC']],
+      // Opsional: Jika relasi User sudah di-set di models/index.ts, gunakan include
+      // include: [{ model: User, attributes: ['nama', 'email'] }] 
+    });
+    return NextResponse.json({ success: true, data: allPds });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

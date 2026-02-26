@@ -28,7 +28,11 @@ export default function LoginPage() {
       if (data.success) {
         // Simpan data user ke localStorage untuk sesi sederhana
         localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/dashboard');
+        if (data.user.role === 'ADMIN') {
+          window.location.href = '/admin/persetujuan';
+        } else {
+          window.location.href = '/pds/permohonan';
+        } 
       } else {
         setError(data.message || 'Username atau password salah');
       }

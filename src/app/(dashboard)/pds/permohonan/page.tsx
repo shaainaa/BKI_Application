@@ -1,28 +1,65 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, FileText, Edit, Calendar, ChevronDown, Search, AlignJustify } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, FileText, Edit, Calendar, ChevronDown, Search, CheckCircle, Clock, AlertCircle, AlignJustify, XCircle } from 'lucide-react';
 import FormPermohonanModal from './form_pds/page';
+import { PDFViewer } from '@react-pdf/renderer';
+import { PdsTemplate } from '@/components/PdsTemplate';
 
 export default function PermohonanPDS() {
-  // State untuk pop-up form
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // State Table (Dibuat kosong sesuai permintaan)
   const [tableData, setTableData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // State untuk filter custom (Dropdown + Search + Checkbox)
-  const [isLokasiOpen, setIsLokasiOpen] = useState(false);
-  const [lokasiSearch, setLokasiSearch] = useState('');
+  // States untuk Filter Dinamis dari Database
+  const [opsiLokasi, setOpsiLokasi] = useState<string[]>([]);
+  const [opsiKeperluan, setOpsiKeperluan] = useState<string[]>([]);
   
+  // States untuk UI Dropdown
+  const [isLokasiOpen, setIsLokasiOpen] = useState(false);
   const [isKeperluanOpen, setIsKeperluanOpen] = useState(false);
+  const [lokasiSearch, setLokasiSearch] = useState('');
   const [keperluanSearch, setKeperluanSearch] = useState('');
 
-  // data opsi untuk checkbox filter
-  const opsiLokasi = ['LAUT JAWA', 'LAUT BANDA', 'SELAT SUNDA', 'JAKARTA PORT', 'SURABAYA PORT'];
-  const opsiKeperluan = ['TRAINING LEAD', 'INSPECTION', 'SURVEY KAPAL', 'AUDIT TAHUNAN'];
+  // States untuk Nilai Filter yang Dipilih
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedLokasi, setSelectedLokasi] = useState<string[]>([]);
+  const [selectedKeperluan, setSelectedKeperluan] = useState<string[]>([]);
 
-  // Fungsi untuk menutup dropdown custom saat klik di luar (Opsional tapi best practice)
+  // State untuk generate Permohonan PDS
+  const [previewData, setPreviewData] = useState<any>(null);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      const userRaw = localStorage.getItem('user');
+      if (!userRaw) return;
+      const user = JSON.parse(userRaw);
+
+      // 1. Ambil Data Table
+      const resData = await fetch(`/api/pds/list?userId=${user.id}`);
+      const resultData = await resData.json();
+      if (resultData.success) setTableData(resultData.data);
+
+      // 2. Ambil Opsi Filter Unik dari Database
+      const resFilter = await fetch('/api/pds/filters');
+      const resultFilter = await resFilter.json();
+      if (resultFilter.success) {
+        setOpsiLokasi(resultFilter.lokasi);
+        setOpsiKeperluan(resultFilter.keperluan);
+      }
+    } catch (err) {
+      console.error("Gagal load data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  // Logika Menutup Dropdown saat klik di luar
   const filterRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -35,195 +72,144 @@ export default function PermohonanPDS() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIKA PERHITUNGAN SUMMARY CARD ---
-  // Menghitung jumlah masing-masing status dari isi tableData
-  const summaryData = {
-    totalPermohonan: tableData.length,
-    menungguPersetujuan: tableData.filter((item) => item.status === 'Proses').length,
-    uploadBukti: tableData.filter((item) => item.status === 'Upload Bukti').length,
-    selesai: tableData.filter((item) => item.status === 'Selesai').length,
+  // --- LOGIKA FILTERING TABEL (REAL-TIME) ---
+  const filteredData = useMemo(() => {
+    return tableData.filter(item => {
+      const matchStatus = selectedStatus === '' || item.status === selectedStatus;
+      const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
+      const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
+      return matchStatus && matchLokasi && matchKeperluan;
+    });
+  }, [tableData, selectedStatus, selectedLokasi, selectedKeperluan]);
+
+  // Summary Card Data
+  const summary = {
+    total: tableData.length,
+    pending: tableData.filter(i => i.status === 'PENDING').length,
+    approved: tableData.filter(i => i.status === 'APPROVED').length,
+    completed: tableData.filter(i => i.status === 'COMPLETED').length,
+  };
+
+  const toggleFilter = (list: string[], setList: any, value: string) => {
+    if (list.includes(value)) {
+      setList(list.filter(i => i !== value));
+    } else {
+      setList([...list, value]);
+    }
   };
 
   return (
     <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans">
-      
-      {/* Title */}
-      <h1 className="text-4xl font-bold text-[#1F2937] mb-6">Permohonan PDS</h1>
+      <h1 className="text-4xl font-bold text-[#1F2937] mb-6 tracking-tight">Monitoring Surveyor</h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-pink-50 p-4 rounded-xl flex items-center gap-4 border border-pink-100">
-          <div className="p-3 bg-pink-200 rounded-full text-pink-600">
-            <FileText size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 font-semibold">Total Permohonan</p>
-            {/* Angka dinamis dari summaryData */}
-            <p className="text-xl font-bold text-gray-900">{summaryData.totalPermohonan}</p>
-          </div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-xl flex items-center gap-4 border border-orange-100">
-          <div className="p-3 bg-orange-200 rounded-full text-orange-600">
-            <FileText size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 font-semibold">Menunggu Persetujuan</p>
-            {/* Angka dinamis dari summaryData */}
-            <p className="text-xl font-bold text-gray-900">{summaryData.menungguPersetujuan}</p>
-          </div>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-xl flex items-center gap-4 border border-purple-100">
-          <div className="p-3 bg-purple-200 rounded-full text-purple-600">
-            <Edit size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 font-semibold">Upload Bukti</p>
-            {/* Angka dinamis dari summaryData */}
-            <p className="text-xl font-bold text-gray-900">{summaryData.uploadBukti}</p>
-          </div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-xl flex items-center gap-4 border border-green-100">
-          <div className="p-3 bg-green-200 rounded-full text-green-600">
-            <FileText size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 font-semibold">Selesai</p>
-            {/* Angka dinamis dari summaryData */}
-            <p className="text-xl font-bold text-gray-900">{summaryData.selesai}</p>
-          </div>
-        </div>
+        <StatCard title="Total Permohonan" count={summary.total} color="pink" icon={<FileText size={20}/>} />
+        <StatCard title="Menunggu Approval" count={summary.pending} color="orange" icon={<Clock size={20}/>} />
+        <StatCard title="Siap Cetak PDS" count={summary.approved} color="purple" icon={<Edit size={20}/>} />
+        <StatCard title="Selesai" count={summary.completed} color="green" icon={<CheckCircle size={20}/>} />
       </div>
 
-      {/* Action Button */}
       <button 
         onClick={() => setIsModalOpen(true)}
-        className="bg-[#0A8E9A] hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center gap-2 font-medium mb-6 transition-colors shadow-sm"
+        className="bg-[#0A8E9A] hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 font-bold mb-8 transition-all shadow-md"
       >
-        <Plus size={18} />
-        Buat Permohonan
+        <Plus size={20} /> Buat Permohonan Baru
       </button>
 
       {/* Filters Section */}
-      <div className="bg-white p-4 rounded-t-xl border border-gray-200" ref={filterRef}>
-        <p className="text-sm font-bold text-gray-700 mb-3">Filter</p>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="bg-white p-5 rounded-t-2xl border border-gray-200" ref={filterRef}>
+        <div className="flex items-center gap-2 mb-4 text-[#0A8E9A]">
+          <AlignJustify size={18} />
+          <p className="text-sm font-bold uppercase tracking-wider">Filter</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           
           {/* Filter Status */}
-          <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500 cursor-pointer bg-white">
-            <option value="">Status</option>
-            <option value="Proses">Proses</option>
-            <option value="Upload Bukti">Upload Bukti</option>
-            <option value="Selesai">Selesai</option>
+          <select 
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          >
+            <option value="">Semua Status</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="COMPLETED">Completed</option>
           </select>
 
-          {/* Filter Lokasi (Search + Checkbox) */}
-          <div className="relative">
-            <button 
-              onClick={() => { setIsLokasiOpen(!isLokasiOpen); setIsKeperluanOpen(false); }}
-              className="w-full flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 bg-white"
-            >
-              Lokasi <ChevronDown size={16} className="text-gray-400" />
-            </button>
-            {isLokasiOpen && (
-              <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 shadow-lg rounded-md z-10 p-2">
-                <div className="relative mb-2">
-                  <input 
-                    type="text" placeholder="Cari lokasi..." 
-                    value={lokasiSearch} onChange={(e) => setLokasiSearch(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs pl-7 outline-none focus:border-teal-500"
-                  />
-                  <Search size={12} className="absolute left-2 top-2 text-gray-400" />
-                </div>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {opsiLokasi.filter(l => l.toLowerCase().includes(lokasiSearch.toLowerCase())).map((lokasi, idx) => (
-                    <label key={idx} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="checkbox" className="accent-[#0A8E9A]" /> {lokasi}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Filter Permohonan */}
-          <select className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500 cursor-pointer bg-white">
-            <option value="">Permohonan</option>
-            <option value="PDS">PDS</option>
-            <option value="Lembur">Lembur</option>
-            <option value="Transportasi">Transportasi</option>
-          </select>
-
-          {/* Filter Tanggal */}
-          <input 
-            type="date" 
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 outline-none focus:border-teal-500 cursor-pointer bg-white"
+          {/* Custom Dropdown Lokasi */}
+          <FilterDropdown 
+            label="Lokasi"
+            isOpen={isLokasiOpen}
+            setIsOpen={setIsLokasiOpen}
+            searchValue={lokasiSearch}
+            setSearchValue={setLokasiSearch}
+            options={opsiLokasi}
+            selectedOptions={selectedLokasi}
+            onToggle={(val: string) => toggleFilter(selectedLokasi, setSelectedLokasi, val)}
+            otherDropdownClose={() => setIsKeperluanOpen(false)}
           />
 
-          {/* Filter Keperluan (Search + Checkbox) */}
-          <div className="relative">
-            <button 
-              onClick={() => { setIsKeperluanOpen(!isKeperluanOpen); setIsLokasiOpen(false); }}
-              className="w-full flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-600 bg-white"
-            >
-              Keperluan <ChevronDown size={16} className="text-gray-400" />
-            </button>
-            {isKeperluanOpen && (
-              <div className="absolute top-full right-0 mt-1 w-full bg-white border border-gray-200 shadow-lg rounded-md z-10 p-2">
-                <div className="relative mb-2">
-                  <input 
-                    type="text" placeholder="Cari keperluan..." 
-                    value={keperluanSearch} onChange={(e) => setKeperluanSearch(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs pl-7 outline-none focus:border-teal-500"
-                  />
-                  <Search size={12} className="absolute left-2 top-2 text-gray-400" />
-                </div>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {opsiKeperluan.filter(k => k.toLowerCase().includes(keperluanSearch.toLowerCase())).map((keperluan, idx) => (
-                    <label key={idx} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="checkbox" className="accent-[#0A8E9A]" /> {keperluan}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Custom Dropdown Keperluan */}
+          <FilterDropdown 
+            label="Keperluan"
+            isOpen={isKeperluanOpen}
+            setIsOpen={setIsKeperluanOpen}
+            searchValue={keperluanSearch}
+            setSearchValue={setKeperluanSearch}
+            options={opsiKeperluan}
+            selectedOptions={selectedKeperluan}
+            onToggle={(val: string) => toggleFilter(selectedKeperluan, setSelectedKeperluan, val)}
+            otherDropdownClose={() => setIsLokasiOpen(false)}
+          />
 
+          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white cursor-pointer" />
         </div>
       </div>
 
-      {/* Table Container - Horizontal Scroll Enabled */}
-      <div className="bg-white border-x border-b border-gray-200 overflow-x-auto whitespace-nowrap pb-4">
+      {/* Table Section */}
+      <div className="bg-white border-x border-b border-gray-200 shadow-sm overflow-x-auto rounded-b-2xl">
         <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
-            <tr className="bg-[#B9C6D3] text-gray-800 text-sm">
-              <th className="py-3 px-6 font-semibold w-32">Tanggal</th>
-              <th className="py-3 px-6 font-semibold w-40">Lokasi</th>
-              <th className="py-3 px-6 font-semibold w-32">Permohonan</th>
-              <th className="py-3 px-6 font-semibold w-48">Keperluan</th>
-              <th className="py-3 px-6 font-semibold text-center w-32">Status</th>
-              <th className="py-3 px-6 font-semibold w-32 text-center">Bukti Survey</th>
-              <th className="py-3 px-6 font-semibold w-40 text-center">Bukti Transportasi</th>
-              <th className="py-3 px-6 font-semibold w-32 text-center">Boarding Pass</th>
-              <th className="py-3 px-6 font-semibold w-32 text-center">Bukti Lainnya</th>
+            <tr className="bg-[#B9C6D3] text-gray-800 text-[11px] uppercase tracking-widest">
+              <th className="py-4 px-6 font-bold">Tanggal</th>
+              <th className="py-4 px-6 font-bold">Lokasi</th>
+              <th className="py-4 px-6 font-bold">Permohonan</th>
+              <th className="py-4 px-6 font-bold">Keperluan</th>
+              <th className="py-4 px-6 font-bold text-center">Status</th>
+              <th className="py-4 px-6 font-bold text-center">Aksi</th>
             </tr>
           </thead>
-          <tbody>
-            {tableData.length === 0 ? (
-              // Empty State jika tabel kosong
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={6} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+            ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 px-6 text-center text-gray-500 bg-gray-50">
-                  <div className="flex flex-col items-center justify-center">
-                    <FileText size={40} className="text-gray-300 mb-2" />
-                    <p className="font-medium">Belum ada data permohonan PDS.</p>
-                    <p className="text-xs mt-1">Silakan klik "Buat Permohonan" untuk menambahkan data.</p>
-                  </div>
+                <td colSpan={6} className="py-20 text-center bg-gray-50">
+                  <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
+                  <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
               </tr>
             ) : (
-              // Looping data jika sudah ada (Nantinya)
-              tableData.map((row, index) => (
-                <tr key={index}>
-                  {/* ... render row data ... */}
+              filteredData.map((row) => (
+                <tr key={row.id} className="hover:bg-teal-50/30 transition-colors">
+                  <td className="py-4 px-6 text-sm text-gray-600">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
+                  <td className="py-4 px-6 text-sm font-bold text-gray-800">{row.lokasi}</td>
+                  <td className="py-4 px-6">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-black italic uppercase">{row.permohonan}</span>
+                  </td>
+                  <td className="py-4 px-6 text-sm text-gray-500 italic truncate max-w-[200px]">{row.keperluan}</td>
+                  <td className="py-4 px-6 text-center">
+                    <BadgeStatus status={row.status} />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <button
+                      onClick={() => setPreviewData(row)}
+                      className="flex items-center gap-1 text-[#0A8E9A] hover:underline font-bold text-xs mx-auto"
+                    >
+                      <FileText size={14} /> Lihat Detail
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -231,34 +217,95 @@ export default function PermohonanPDS() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="bg-white px-6 py-4 border-t border-gray-200 rounded-b-xl flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          Menampilkan {tableData.length === 0 ? 0 : 1} sampai {tableData.length} dari {tableData.length}
-        </p>
-        <div className="flex items-center gap-2">
-          <button 
-            disabled={tableData.length === 0}
-            className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-sm hover:bg-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            &lt; Back
-          </button>
-          <button className="px-3 py-1 bg-[#0A8E9A] text-white rounded text-sm font-medium">1</button>
-          <button 
-            disabled={tableData.length === 0}
-            className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-sm hover:bg-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next &gt;
-          </button>
+      <FormPermohonanModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); fetchInitialData(); }} />
+
+      {previewData && (
+        <div className='fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6'>
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className='p-4 border-b flex justify-between items-center bg-gray-50'>
+              <div className='gap-2 flex items-center'> 
+                <FileText size={20} className='text-[#0A8E9A]' />
+                <h3 className="font-bold text-gray-800 italic">Preview Surat Permohonan - {previewData?.noAgenda}</h3>
+              </div>
+              <button onClick={() => setPreviewData(null)} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors hover:text-gray-700">
+                <XCircle size={24} className='text-red-500' />
+              </button>
+            </div>
+            <PDFViewer width="100%" height="100%" showToolbar={true}>
+              <PdsTemplate data={previewData} />
+            </PDFViewer>
+          </div>
+
         </div>
-      </div>
-
-      {/* Memanggil Komponen Modal Form Permohonan */}
-      <FormPermohonanModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
-
+      )}
     </div>
   );
+}
+
+// --- SUB-KOMPONEN REUSABLE ---
+
+function FilterDropdown({ label, isOpen, setIsOpen, searchValue, setSearchValue, options, selectedOptions, onToggle, otherDropdownClose }: any) {
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => { setIsOpen(!isOpen); otherDropdownClose(); }}
+        className={`w-full flex items-center justify-between border rounded-xl px-3 py-2.5 text-sm transition-all ${isOpen ? 'border-teal-500 ring-2 ring-teal-500 bg-white' : 'border-gray-300 text-gray-600 bg-white'}`}
+      >
+        <span>{selectedOptions.length > 0 ? `${label} (${selectedOptions.length})` : label}</span>
+        <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-teal-500' : 'text-gray-400'}`} />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-20 p-3 animate-in fade-in slide-in-from-top-2">
+          <div className="relative mb-3">
+            <input 
+              type="text" placeholder={`Cari ${label}...`} 
+              className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs pl-8 outline-none focus:border-teal-500"
+              value={searchValue} onChange={(e) => setSearchValue(e.target.value)}
+            />
+            <Search size={14} className="absolute left-2.5 top-2 text-gray-400" />
+          </div>
+          <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar text-xs">
+            {options.filter((o: string) => o.toLowerCase().includes(searchValue.toLowerCase())).map((opt: string, i: number) => (
+              <label key={i} className="flex items-center gap-2 p-2 hover:bg-teal-50 rounded-lg cursor-pointer transition-colors">
+                <input 
+                  type="checkbox" 
+                  className="accent-[#0A8E9A]" 
+                  checked={selectedOptions.includes(opt)}
+                  onChange={() => onToggle(opt)}
+                /> {opt}
+              </label>
+            ))}
+            {options.length === 0 && <p className="text-center text-gray-400 py-2">Tidak ada data</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ title, count, color, icon }: any) {
+  const styles: any = {
+    pink: "bg-pink-50 border-pink-100 text-pink-600 bg-pink-200",
+    orange: "bg-orange-50 border-orange-100 text-orange-600 bg-orange-200",
+    purple: "bg-purple-50 border-purple-100 text-purple-600 bg-purple-200",
+    green: "bg-green-50 border-green-100 text-green-600 bg-green-200",
+  };
+  return (
+    <div className={`${styles[color].split(" ")[0]} p-5 rounded-2xl flex items-center gap-4 border shadow-sm`}>
+      <div className={`p-3 rounded-xl ${styles[color].split(" ")[3]} ${styles[color].split(" ")[2]}`}>{icon}</div>
+      <div>
+        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{title}</p>
+        <p className="text-2xl font-black text-gray-900 leading-none mt-1">{count}</p>
+      </div>
+    </div>
+  );
+}
+
+function BadgeStatus({ status }: { status: string }) {
+  const cfg: any = {
+    PENDING: "bg-red-50 text-red-600 border-red-100",
+    APPROVED: "bg-yellow-50 text-yellow-600 border-yellow-100",
+    COMPLETED: "bg-green-50 text-green-600 border-green-100",
+  };
+  return <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${cfg[status] || cfg.PENDING}`}>{status}</span>;
 }
