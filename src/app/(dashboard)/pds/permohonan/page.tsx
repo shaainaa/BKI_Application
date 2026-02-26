@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, FileText, Edit, Calendar, ChevronDown, Search, CheckCircle, Clock, AlertCircle, AlignJustify, XCircle } from 'lucide-react';
+import { Plus, FileText, Edit, Calendar, ChevronDown, Search, CheckCircle, Clock, AlertCircle, AlignJustify, XCircle, Upload, Edit2, Eye } from 'lucide-react'; // Tambahkan 'Upload' disini
 import FormPermohonanModal from './form_pds/page';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 
 export default function PermohonanPDS() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // State Table (Dibuat kosong untuk sementara, nanti akan diisi dengan data dari database)
   const [tableData, setTableData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,14 +101,15 @@ export default function PermohonanPDS() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans">
-      <h1 className="text-4xl font-bold text-[#1F2937] mb-6 tracking-tight">Monitoring Surveyor</h1>
+    <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans w-full overflow-hidden">
+      <h1 className="text-4xl font-bold text-[#1F2937] mb-6 tracking-tight">Permohonan PDS</h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatCard title="Total Permohonan" count={summary.total} color="pink" icon={<FileText size={20}/>} />
         <StatCard title="Menunggu Approval" count={summary.pending} color="orange" icon={<Clock size={20}/>} />
-        <StatCard title="Siap Cetak PDS" count={summary.approved} color="purple" icon={<Edit size={20}/>} />
+        {/* Mengubah title Card Ungu menjadi "Upload Bukti" */}
+        <StatCard title="Upload Bukti" count={summary.approved} color="purple" icon={<Edit size={20}/>} />
         <StatCard title="Selesai" count={summary.completed} color="green" icon={<CheckCircle size={20}/>} />
       </div>
 
@@ -167,38 +170,45 @@ export default function PermohonanPDS() {
         </div>
       </div>
 
-      {/* Table Section */}
+      {/* Table Section - Ditambahkan overflow-x-auto agar bisa di-scroll horizontal */}
       <div className="bg-white border-x border-b border-gray-200 shadow-sm overflow-x-auto rounded-b-2xl">
-        <table className="w-full text-left border-collapse min-w-[1000px]">
+        {/* Tambahkan min-w-max agar tabel mau melebar ke kanan */}
+        <table className="w-full text-left border-collapse min-w-max">
           <thead>
-            <tr className="bg-[#B9C6D3] text-gray-800 text-[11px] uppercase tracking-widest">
-              <th className="py-4 px-6 font-bold">Tanggal</th>
-              <th className="py-4 px-6 font-bold">Lokasi</th>
-              <th className="py-4 px-6 font-bold">Permohonan</th>
-              <th className="py-4 px-6 font-bold">Keperluan</th>
+            {/* Tambahkan whitespace-nowrap agar judul kolom tidak turun ke bawah */}
+            <tr className="bg-[#B9C6D3] text-gray-800 text-[13px] tracking-widest whitespace-nowrap">
+              <th className="py-4 px-6 font-bold text-center">Tanggal</th>
+              <th className="py-4 px-6 font-bold text-center">Lokasi</th>
+              <th className="py-4 px-6 font-bold text-center">Permohonan</th>
+              <th className="py-4 px-6 font-bold text-center">Keperluan</th>
               <th className="py-4 px-6 font-bold text-center">Status</th>
-              <th className="py-4 px-6 font-bold text-center">Aksi</th>
+              <th className="py-4 px-6 font-bold text-center">Surat</th>
+              <th className="py-4 px-6 font-bold text-center">Bukti Survey</th>
+              <th className="py-4 px-6 font-bold text-center">Bukti Transportasi</th>
+              <th className="py-4 px-6 font-bold text-center">Bukti Penginapan</th>
+              <th className="py-4 px-6 font-bold text-center">Bukti Lainnya</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={6} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+              <tr><td colSpan={9} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center bg-gray-50">
+                <td colSpan={9} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
               </tr>
             ) : (
               filteredData.map((row) => (
-                <tr key={row.id} className="hover:bg-teal-50/30 transition-colors">
+                <tr key={row.id} className="hover:bg-teal-50/30 transition-colors whitespace-nowrap">
                   <td className="py-4 px-6 text-sm text-gray-600">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
                   <td className="py-4 px-6 text-sm font-bold text-gray-800">{row.lokasi}</td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 text-center">
                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-black italic uppercase">{row.permohonan}</span>
                   </td>
-                  <td className="py-4 px-6 text-sm text-gray-500 italic truncate max-w-[200px]">{row.keperluan}</td>
+                  {/* Menghapus truncate agar tabel bisa meluas secara horizontal */}
+                  <td className="py-4 px-6 text-sm text-gray-500 italic max-w-xs overflow-hidden text-ellipsis">{row.keperluan}</td>
                   <td className="py-4 px-6 text-center">
                     <BadgeStatus status={row.status} />
                   </td>
@@ -209,6 +219,36 @@ export default function PermohonanPDS() {
                     >
                       <FileText size={14} /> Lihat Detail
                     </button>
+                  </td>
+                  
+                  {/* --- BAGIAN UPLOAD BUKTI --- */}
+                  <td className="py-4 px-6 text-center">
+                    <TombolUpload status={row.status} 
+                    pdsId={row.id} 
+                    kategori="SURVEY" 
+                    existingBukti={row.bukti?.find((b: any) => b.kategori === 'SURVEY')}
+                    onUploadSuccess={fetchInitialData}/>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <TombolUpload status={row.status} 
+                    pdsId={row.id} 
+                    kategori="TRANSPORTASI" 
+                    existingBukti={row.bukti?.find((b: any) => b.kategori === 'TRANSPORTASI')}
+                    onUploadSuccess={fetchInitialData} />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <TombolUpload status={row.status} 
+                    pdsId={row.id} 
+                    kategori="PENGINAPAN" 
+                    existingBukti={row.bukti?.find((b: any) => b.kategori === 'PENGINAPAN')}
+                    onUploadSuccess={fetchInitialData} />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <TombolUpload status={row.status} 
+                    pdsId={row.id} 
+                    kategori="LAINNYA" 
+                    existingBukti={row.bukti?.find((b: any) => b.kategori === 'LAINNYA')}
+                    onUploadSuccess={fetchInitialData} />
                   </td>
                 </tr>
               ))
@@ -235,7 +275,6 @@ export default function PermohonanPDS() {
               <PdsTemplate data={previewData} />
             </PDFViewer>
           </div>
-
         </div>
       )}
     </div>
@@ -243,6 +282,91 @@ export default function PermohonanPDS() {
 }
 
 // --- SUB-KOMPONEN REUSABLE ---
+
+// Komponen Khusus Tombol Upload Bukti
+function TombolUpload({ status, pdsId, kategori, existingBukti, onUploadSuccess }: any) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('pdsId', pdsId.toString());
+    formData.append('kategori', kategori);
+
+    try {
+      const res = await fetch('/api/pds/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Tampilkan pesan berbeda tergantung ini upload baru atau edit
+        alert(existingBukti ? `${kategori} berhasil diperbarui!` : `${kategori} berhasil diupload!`);
+        onUploadSuccess();
+      } else {
+        alert(`Gagal: ${data.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  if (status !== 'APPROVED') {
+    return <span className="text-gray-300 text-xs">-</span>;
+  }
+
+  // JIKA FILE SUDAH ADA: Tampilkan tombol Lihat dan tombol Edit
+  if (existingBukti) {
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {/* Tombol Lihat Bukti (Buka di tab baru) */}
+        <a 
+          href={existingBukti.fileUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1.5 rounded-lg border border-green-200 transition-colors text-xs font-bold"
+        >
+          <Eye size={14} /> Lihat
+        </a>
+        
+        {/* Tombol Ganti File (Timpa file lama) */}
+        <label className="cursor-pointer flex items-center justify-center p-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors" title="Ganti File">
+          {isUploading ? (
+            <span className="text-[10px] animate-pulse">...</span>
+          ) : (
+            <Edit2 size={14} />
+          )}
+          <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.png,.jpg,.jpeg" />
+        </label>
+      </div>
+    );
+  }
+
+  // JIKA FILE BELUM ADA: Tampilkan tombol Upload biasa
+  return (
+    <label className={`cursor-pointer flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border transition-colors text-xs font-bold w-max mx-auto
+      ${isUploading ? 'bg-gray-100 text-gray-500 border-gray-300' : 'text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 border-teal-200'}
+    `}>
+      {isUploading ? (
+        <span>Uploading...</span>
+      ) : (
+        <>
+          <Upload size={14} /> Upload Bukti
+          <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.png,.jpg,.jpeg" />
+        </>
+      )}
+    </label>
+  );
+}
 
 function FilterDropdown({ label, isOpen, setIsOpen, searchValue, setSearchValue, options, selectedOptions, onToggle, otherDropdownClose }: any) {
   return (
@@ -284,15 +408,22 @@ function FilterDropdown({ label, isOpen, setIsOpen, searchValue, setSearchValue,
 }
 
 function StatCard({ title, count, color, icon }: any) {
+  // Cara penulisan objek untuk menentukan kelas warna diganti agar spesifik menunjuk border lebih gelap
   const styles: any = {
-    pink: "bg-pink-50 border-pink-100 text-pink-600 bg-pink-200",
-    orange: "bg-orange-50 border-orange-100 text-orange-600 bg-orange-200",
-    purple: "bg-purple-50 border-purple-100 text-purple-600 bg-purple-200",
-    green: "bg-green-50 border-green-100 text-green-600 bg-green-200",
+    pink: { bg: "bg-pink-50", border: "border-pink-300", text: "text-pink-600", iconBg: "bg-pink-200" },
+    orange: { bg: "bg-orange-50", border: "border-orange-300", text: "text-orange-600", iconBg: "bg-orange-200" },
+    purple: { bg: "bg-purple-50", border: "border-purple-300", text: "text-purple-600", iconBg: "bg-purple-200" },
+    green: { bg: "bg-green-50", border: "border-green-300", text: "text-green-600", iconBg: "bg-green-200" },
   };
+  
+  const theme = styles[color] || styles.pink;
+
   return (
-    <div className={`${styles[color].split(" ")[0]} p-5 rounded-2xl flex items-center gap-4 border shadow-sm`}>
-      <div className={`p-3 rounded-xl ${styles[color].split(" ")[3]} ${styles[color].split(" ")[2]}`}>{icon}</div>
+    // Memasukkan style dinamis ke template string
+    <div className={`${theme.bg} ${theme.border} p-5 rounded-2xl flex items-center gap-4 border shadow-sm`}>
+      <div className={`p-3 rounded-xl ${theme.iconBg} ${theme.text}`}>
+        {icon}
+      </div>
       <div>
         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{title}</p>
         <p className="text-2xl font-black text-gray-900 leading-none mt-1">{count}</p>
@@ -303,9 +434,9 @@ function StatCard({ title, count, color, icon }: any) {
 
 function BadgeStatus({ status }: { status: string }) {
   const cfg: any = {
-    PENDING: "bg-red-50 text-red-600 border-red-100",
-    APPROVED: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    COMPLETED: "bg-green-50 text-green-600 border-green-100",
+    PENDING: "bg-red-50 text-red-600 border-red-200",
+    APPROVED: "bg-yellow-50 text-yellow-600 border-yellow-200",
+    COMPLETED: "bg-green-50 text-green-600 border-green-200",
   };
   return <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${cfg[status] || cfg.PENDING}`}>{status}</span>;
 }

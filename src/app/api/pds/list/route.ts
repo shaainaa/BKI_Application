@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
+import BuktiPds from '@/models/BuktiPDS';
 
 // Penting: Pastikan relasi sudah didefinisikan sebelum query ini dipanggil
 // Biasanya diletakkan di file models/index.ts atau di awal aplikasi
@@ -22,6 +23,11 @@ export async function GET(req: NextRequest) {
                 model: User,
                 as: 'user', // Nama alias harus sama dengan yang di-define di belongsTo
                 attributes: ['nama', 'email'], // Ambil kolom nama saja (atau email jika perlu)
+            },
+            {
+                model: BuktiPds,
+                as: 'bukti', 
+                required: false, 
             }
         ],
         order: [['tanggalPengajuan', 'DESC']],
