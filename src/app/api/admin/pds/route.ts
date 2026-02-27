@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
+import User from '@/models/User';
+Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -29,7 +31,16 @@ export async function PATCH(req: NextRequest) {
 export async function GET() {
   try {
     const allPds = await Pds.findAll({
+      where: {},  
       order: [['tanggalPengajuan', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: 'user', // Sesuaikan dengan nama alias relasi kamu (baca poin 2)
+          attributes: ['id', 'nama', 'email'],
+          required: false, // Opsional: Pilih kolom yang mau diambil agar performa lebih ringan
+        }
+      ]
       // Opsional: Jika relasi User sudah di-set di models/index.ts, gunakan include
       // include: [{ model: User, attributes: ['nama', 'email'] }] 
     });
