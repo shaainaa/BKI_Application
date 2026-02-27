@@ -34,12 +34,12 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <DetailRow label="NO SO & SPS" value={data.noAgenda} />
         <DetailRow label="KEBERANGKATAN" value={`${data.tglBerangkat}                   JAM: ${data.jamBerangkat || '-'}`} />
         <DetailRow label="KEMBALI" value={`${data.tglKembali}                   JAM: ${data.jamKembali || '-'}`} />
-        <DetailRow label="VISIT KE." value={`${data.visitKe}                                                            KETERANGAN VISIT: ${data.keteranganVisit}`} />
+        <DetailRow label="VISIT KE." value={`${data.visitKe}                                                             KETERANGAN VISIT: ${data.keteranganVisit}`} />
       </View>
 
-      <Text style={{ marginTop: 30, marginRight: 50, textAlign: 'right' }}>Surabaya, {new Date(data.tanggalPengajuan).toLocaleDateString('id-ID')}</Text>
+      <Text style={{ marginTop: 20, marginRight: 50, textAlign: 'right' }}>Surabaya, {new Date(data.tanggalPengajuan).toLocaleDateString('id-ID')}</Text>
 
-      <View style={styles.footer}>
+      <View style={ styles.footer}>
         <View style={styles.signBox}>
           <Text>Mengetahui</Text>
           <Text>SM Operasi</Text>

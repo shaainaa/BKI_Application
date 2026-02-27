@@ -191,10 +191,10 @@ export default function PermohonanPDS() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={9} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+              <tr><td colSpan={10} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-20 text-center bg-gray-50">
+                <td colSpan={10} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>

@@ -131,17 +131,17 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
             Form Permohonan Pembuatan PDS
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 ">
             
             {/* Nama Surveyor & Email */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-bold text-gray-800 uppercase">Surveyor</label>
-                <input type="text" value={formData.namaSurveyor} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" />
+                <input type="text" value={formData.namaSurveyor} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" required />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-bold text-gray-800 uppercase">Email</label>
-                <input type="text" value={formData.email} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" />
+                <input type="text" value={formData.email} readOnly className="w-full bg-gray-100 rounded-md px-3 py-2 text-xs text-gray-500 outline-none cursor-not-allowed" required />
               </div>
             </div>
 
@@ -151,6 +151,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <select 
                 name="permohonan" value={formData.permohonan} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
+                required
               >
                 <option value="">Pilih satu</option>
                 <option value="PDS">PDS</option>
@@ -165,6 +166,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="date" name="tanggalPengajuan" value={formData.tanggalPengajuan} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                required
               />
             </div>
 
@@ -174,6 +176,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="text" name="lokasi" value={formData.lokasi} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 uppercase"
+                required
               />
             </div>
 
@@ -183,6 +186,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="text" name="keperluan" value={formData.keperluan} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 uppercase"
+                required
               />
             </div>
 
@@ -192,6 +196,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="text" name="nomorAgenda" value={formData.nomorAgenda} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
+                required
               />
             </div>
 
@@ -201,6 +206,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="date" name="keberangkatan" value={formData.keberangkatan} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                required
               />
             </div>
 
@@ -211,6 +217,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
                 <input 
                   type="time" name="jamBerangkat" value={formData.jamBerangkat} onChange={handleChange}
                   className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                  required
                 />
               </div>
             )}
@@ -221,6 +228,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="date" name="kembali" value={formData.kembali} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                required
               />
             </div>
 
@@ -231,6 +239,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
                 <input 
                   type="time" name="jamKembali" value={formData.jamKembali} onChange={handleChange}
                   className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                  required
                 />
               </div>
             )}
@@ -241,6 +250,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <input 
                 type="text" name="visitKe" value={formData.visitKe} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
+                required
               />
             </div>
 
@@ -250,6 +260,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               <select 
                 name="keteranganVisit" value={formData.keteranganVisit} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
+                required
               >
                 <option value="">Pilih satu</option>
                 <option value="Final">Final</option>
@@ -272,6 +283,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden" 
+                  required
                 />
               </label>
             </div>
