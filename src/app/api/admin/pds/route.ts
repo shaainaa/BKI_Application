@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
-Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -11,7 +10,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "ID dan Status wajib diisi" }, { status: 400 });
     }
 
-    // Update status di database (PENDING -> APPROVED / COMPLETED)
+    // Update status di database 
     const updatedPds = await Pds.update(
       { status: status },
       { where: { id: id } }
