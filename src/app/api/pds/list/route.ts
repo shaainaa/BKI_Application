@@ -3,9 +3,13 @@ import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
 
-// Penting: Pastikan relasi sudah didefinisikan sebelum query ini dipanggil
-// Biasanya diletakkan di file models/index.ts atau di awal aplikasi
-Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+// GUNAKAN PENGECEKAN INI AGAR TIDAK DOUBLE ALIAS
+if (!Pds.associations.user) {
+  Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+}
+if (!Pds.associations.bukti) {
+  Pds.hasMany(BuktiPds, { foreignKey: 'pdsId', as: 'bukti' });
+}
 
 export async function GET(req: NextRequest) {
   try {
