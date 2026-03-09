@@ -79,10 +79,11 @@ export default function RiwayatPDS() {
   // --- LOGIKA FILTERING (Status Pembayaran + Lokasi + Keperluan) ---
   const filteredData = useMemo(() => {
     return tableData.filter(item => {
+      const matchStatus = item.status === 'COMPLETED'; // Hanya tampilkan yang COMPLETED
       const matchPayment = selectedPaymentStatus === '' || item.statusPembayaran === selectedPaymentStatus;
       const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
       const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
-      return matchPayment && matchLokasi && matchKeperluan;
+      return matchStatus && matchPayment && matchLokasi && matchKeperluan;
     });
   }, [tableData, selectedPaymentStatus, selectedLokasi, selectedKeperluan]);
 
@@ -184,7 +185,7 @@ export default function RiwayatPDS() {
               </tr>
             ) : (
               filteredData.map((row) => (
-                <tr key={row.id} className="hover:bg-teal-50/30 transition-colors whitespace-nowrap">
+                <tr key={row.id} className="hover:bg-teal-50/30 transition-colors">
                   <td className="py-4 px-6 text-sm text-gray-600 justify-center">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
                   <td className="py-4 px-6 text-sm font-bold text-gray-800 justify-center">{row.lokasi}</td>
                   <td className="py-4 px-6 text-center">

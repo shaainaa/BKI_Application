@@ -36,6 +36,22 @@ const Pds = sequelize.define('Pds', {
   status: {
     type: DataTypes.ENUM('PENDING', 'APPROVED', 'COMPLETED'),
     defaultValue: 'PENDING'
+  },
+  nominalPDS: { 
+    type: DataTypes.DECIMAL(15, 2), 
+    allowNull: true 
+  },
+  so: { 
+    type: DataTypes.STRING, 
+    allowNull: true 
+  },
+  sps: { 
+    type: DataTypes.STRING, 
+    allowNull: true 
+  },
+  nomorPdsTrans: { 
+    type: DataTypes.STRING, 
+    allowNull: true 
   }
 }, {
   tableName: 'pds',

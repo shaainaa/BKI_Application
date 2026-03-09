@@ -1,49 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
+import BuktiPds from '@/models/BuktiPDS';
 
-export async function PATCH(req: NextRequest) {
+// --- SOLUSI AMPUH: PAKSA RELASI SETIAP KALI API DIPANGGIL ---
+function applyAssociations() {
+  if (!Pds.associations.user) {
+    Pds.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+  }
+  if (!Pds.associations.bukti) {
+    Pds.hasMany(BuktiPds, { foreignKey: 'pdsId', as: 'bukti' });
+  }
+}
+
+export async function GET() {
   try {
-    const { id, status } = await req.json();
+    // Panggil fungsi relasi dulu
+    applyAssociations();
 
-    if (!id || !status) {
-      return NextResponse.json({ success: false, message: "ID dan Status wajib diisi" }, { status: 400 });
-    }
+    const allPds = await Pds.findAll({
+      order: [['id', 'DESC']], // Gunakan ID dulu untuk tes
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'nama', 'email'],
+          required: false,
+        },
+        {
+          model: BuktiPds,
+          as: 'bukti',
+          required: false,
+        }
+      ]
+    });
 
-    // Update status di database 
-    const updatedPds = await Pds.update(
-      { status: status },
-      { where: { id: id } }
-    );
-
-    if (updatedPds[0] === 0) {
-      return NextResponse.json({ success: false, message: "Data tidak ditemukan" }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, message: `Status berhasil diubah menjadi ${status}` });
+    return NextResponse.json({ success: true, data: allPds });
   } catch (error: any) {
+    console.error("Error Get Admin PDS:", error.message);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// API untuk mengambil SEMUA data PDS (Monitoring Admin)
-export async function GET() {
+export async function PATCH(req: NextRequest) {
   try {
-    const allPds = await Pds.findAll({
-      where: {},  
-      order: [['tanggalPengajuan', 'DESC']],
-      include: [
-        {
-          model: User,
-          as: 'user', // Sesuaikan dengan nama alias relasi kamu (baca poin 2)
-          attributes: ['id', 'nama', 'email'],
-          required: false, // Opsional: Pilih kolom yang mau diambil agar performa lebih ringan
-        }
-      ]
-      // Opsional: Jika relasi User sudah di-set di models/index.ts, gunakan include
-      // include: [{ model: User, attributes: ['nama', 'email'] }] 
-    });
-    return NextResponse.json({ success: true, data: allPds });
+    const body = await req.json();
+    const { id, status, nominal, sps, so, nomorPdsTrans } = body;
+
+    const updatedPds = await Pds.update(
+      { 
+        status,
+        nominalPDS: nominal, 
+        sps, 
+        so, 
+        nomorPdsTrans 
+      },
+      { where: { id } }
+    );
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

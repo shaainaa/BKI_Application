@@ -1,5 +1,16 @@
 import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
 
+const formatOnlyDate = (dateString: string) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  // Hasilnya: 09/03/2026 (Format Indonesia)
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 const styles = StyleSheet.create({
   page: { padding: 50, fontSize: 10, fontFamily: 'Helvetica' },
   header: { flexDirection: 'row', marginBottom: 20, borderBottomWidth: 1, paddingBottom: 10 },
@@ -32,12 +43,12 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <DetailRow label="UNTUK PERGI" value={data.lokasi} />
         <DetailRow label="KEPERLUAN" value={data.keperluan} />
         <DetailRow label="NO SO & SPS" value={data.noAgenda} />
-        <DetailRow label="KEBERANGKATAN" value={`${data.tglBerangkat}                   JAM: ${data.jamBerangkat || '-'}`} />
-        <DetailRow label="KEMBALI" value={`${data.tglKembali}                   JAM: ${data.jamKembali || '-'}`} />
+        <DetailRow label="KEBERANGKATAN" value={`${formatOnlyDate(data.tglBerangkat)}                   JAM: ${data.jamBerangkat || '-'}`} />
+        <DetailRow label="KEMBALI" value={`${formatOnlyDate(data.tglKembali)}                   JAM: ${data.jamKembali || '-'}`} />
         <DetailRow label="VISIT KE." value={`${data.visitKe}                                                             KETERANGAN VISIT: ${data.keteranganVisit}`} />
       </View>
 
-      <Text style={{ marginTop: 20, marginRight: 50, textAlign: 'right' }}>Surabaya, {new Date(data.tanggalPengajuan).toLocaleDateString('id-ID')}</Text>
+      <Text style={{ marginTop: 20, marginRight: 50, textAlign: 'right' }}>Surabaya, {formatOnlyDate(data.tanggalPengajuan)}</Text>
 
       <View style={ styles.footer}>
         <View style={styles.signBox}>
