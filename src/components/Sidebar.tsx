@@ -3,33 +3,17 @@
 
 
 import React, { useState } from 'react';
-
 import Image from 'next/image';
-
 import Link from 'next/link';
-
 import { usePathname } from 'next/navigation';
-
 import { Home, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 
-
-
 export default function Sidebar() {
-
   const [isPdsOpen, setIsPdsOpen] = useState<boolean>(true);
-
- 
-
   // Mengambil informasi URL saat ini
-
   const pathname = usePathname();
-
-
-
   // --- LOGIKA PENGECEKAN HALAMAN AKTIF ---
-
   // Cek apakah URL adalah /dashboard atau halaman utama (/)
-
   const isDashboardActive = pathname === '/dashboard' || pathname === '/';
 
  
