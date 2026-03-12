@@ -187,14 +187,15 @@ export default function PermohonanPDS() {
               <th className="py-4 px-6 font-bold text-center">Bukti Transportasi</th>
               <th className="py-4 px-6 font-bold text-center">Bukti Penginapan</th>
               <th className="py-4 px-6 font-bold text-center">Bukti Lainnya</th>
+              <th className="py-4 px-6 font-bold text-center">Updated At</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={10} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+              <tr><td colSpan={11} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-20 text-center bg-gray-50">
+                <td colSpan={11} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
@@ -249,6 +250,17 @@ export default function PermohonanPDS() {
                     kategori="LAINNYA" 
                     existingBukti={row.bukti?.find((b: any) => b.kategori === 'LAINNYA')}
                     onUploadSuccess={fetchInitialData} />
+                  </td>
+                  <td className="py-4 px-6 text-sm text-gray-500 text-center">
+                    {row.bukti && row.bukti.length > 0
+                      ? new Date(Math.max(...row.bukti.map((b: any) => new Date(b.updatedAt).getTime()))).toLocaleString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : '-'} 
                   </td>
                 </tr>
               ))

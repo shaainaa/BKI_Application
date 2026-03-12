@@ -1,6 +1,7 @@
 "use client";
 
-import Sidebar from '@/components/Sidebar';
+import Sidebar from '@/components/Sidebar'; // Ini Sidebar Surveyor
+import AdminSidebar from '@/components/AdminSidebar'; // Import Sidebar Admin kamu
 import Header from '@/components/Header';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,35 +10,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userRaw = localStorage.getItem('user');
+    const user = JSON.parse(userRaw || '{}');
     
     if (!user.id) {
       router.push('/login');
     } else if (pathname.startsWith('/admin') && user.role !== 'ADMIN') {
-      // Jika Surveyor coba masuk ke folder /admin, lempar balik
       alert("Akses Ditolak! Anda bukan Admin.");
       router.push('/pds/permohonan');
     } else {
+      setUserRole(user.role); // Simpan role ke state
       setAuthorized(true);
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
-  if (!authorized) return null; // Cegah "flicker" konten sebelum redirect
+  if (!authorized) return null;
 
   return (
-    // Tambahkan overflow-hidden di bungkus paling luar untuk mematikan scroll layar utama
     <div className="flex bg-[#F8F9FA] min-h-screen overflow-hidden">
-      {/* Sidebar tetap */}
-      <Sidebar />
+      {/* KONDISI SIDEBAR BERDASARKAN ROLE */}
+      {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
 
-      {/* Area Konten Utama */}
-      {/* Hapus w-full. Cukup pakai flex-1 untuk mengisi sisa layar. Tambahkan min-w-0 agar tidak tertendang oleh tabel yang panjang */}
       <div className="flex-1 ml-64 flex flex-col min-w-0">
         <Header />
         
-        {/* Hapus flex (agar tidak merusak dimensi child) dan tambahkan overflow-x-hidden */}
         <main className="p-10 pt-2 flex-1 w-full overflow-x-hidden">
           {children}
         </main>

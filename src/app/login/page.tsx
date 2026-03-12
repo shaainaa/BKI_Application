@@ -29,7 +29,7 @@ export default function LoginPage() {
         // Simpan data user ke localStorage untuk sesi sederhana
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.user.role === 'ADMIN') {
-          window.location.href = '/admin/persetujuan';
+          window.location.href = '/dashboard';
         } else {
           window.location.href = '/pds/permohonan';
         } 
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 <input 
                   type="text" 
                   placeholder="Username"
-                  className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                  className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-black text-sm transition-all"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required 
@@ -101,7 +101,7 @@ export default function LoginPage() {
                   <input 
                     type={showPassword ? "text" : "password"} 
                     placeholder="Enter password"
-                    className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                    className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-black text-sm transition-all"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required 
