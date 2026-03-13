@@ -29,7 +29,7 @@ export default function LoginPage() {
         // Simpan data user ke localStorage untuk sesi sederhana
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.user.role === 'ADMIN') {
-          window.location.href = '/dashboard';
+          window.location.href = '/admin/dashboard';
         } else {
           window.location.href = '/pds/permohonan';
         } 
