@@ -1,251 +1,662 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; 
-import { createPortal } from 'react-dom';
-import { 
-  FileText, Clock, MapPin, Calendar as CalIcon, 
-  Plus, Bell, ChevronRight, Upload, X 
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+	Calendar,
+	ClipboardList,
+	Clock3,
+	Loader2,
+	MapPin,
+	Plus,
+	UserRound,
+	Users,
+	X,
+} from "lucide-react";
 
-export default function AdminDashboard() {
-  const [agendas, setAgendas] = useState<any[]>([]);
-  const [stats, setStats] = useState({ total: 0, pending: 0, ongoing: 0, todayEvent: 0 });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [date, setDate] = useState(new Date());
+type PdsItem = {
+	id: number;
+	status: "PENDING" | "APPROVED" | "COMPLETED";
+	permohonan: string;
+	lokasi: string;
+	tanggalPengajuan: string;
+	tglBerangkat: string;
+	tglKembali: string;
+	user?: {
+		id: number;
+		nama?: string;
+		email?: string;
+	};
+};
 
-  // State Form
-  const [newAgenda, setNewAgenda] = useState({ 
-    title: '', description: '', start: '', end: '', category: 'RAPAT', file: null as File | null 
-  });
+type AgendaItem = {
+	id: number;
+	title: string;
+	description: string;
+	start: string;
+	end: string;
+	category: "RAPAT" | "DINAS" | "URGENT" | "EVENT" | "LAINNYA";
+	color?: string;
+	fileUrl?: string | null;
+	namaFile?: string | null;
+};
 
-  const fetchData = async () => {
-    try {
-      const [resA, resP] = await Promise.all([
-        fetch('/api/admin/agenda'),
-        fetch('/api/admin/pds')
-      ]);
-      const agendaRes = await resA.json();
-      const pdsRes = await resP.json();
+type AgendaForm = {
+	title: string;
+	description: string;
+	start: string;
+	end: string;
+	category: "RAPAT" | "DINAS" | "URGENT" | "EVENT" | "LAINNYA";
+	file: File | null;
+};
 
-      if (agendaRes.success) setAgendas(agendaRes.data);
-      if (pdsRes.success) {
-        setStats({
-          total: pdsRes.data.length,
-          pending: pdsRes.data.filter((i: any) => i.status === 'PENDING').length,
-          ongoing: pdsRes.data.filter((i: any) => i.status === 'APPROVED').length,
-          todayEvent: agendaRes.data.filter((a: any) => 
-            new Date(a.start).toDateString() === new Date().toDateString()
-          ).length
-        });
-      }
-    } catch (e) { console.error(e); }
-  };
+const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const MONTH_NAMES = [
+	"Januari",
+	"Februari",
+	"Maret",
+	"April",
+	"Mei",
+	"Juni",
+	"Juli",
+	"Agustus",
+	"September",
+	"Oktober",
+	"November",
+	"Desember",
+];
 
-  useEffect(() => { fetchData(); }, []);
+export default function AdminDashboardPage() {
+	const [pdsList, setPdsList] = useState<PdsItem[]>([]);
+	const [agendaList, setAgendaList] = useState<AgendaItem[]>([]);
+	const [loadingData, setLoadingData] = useState(true);
+	const [savingAgenda, setSavingAgenda] = useState(false);
+	const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
 
-  const handleSave = async () => {
-    const formData = new FormData();
-    formData.append('title', newAgenda.title);
-    formData.append('start', newAgenda.start);
-    formData.append('end', newAgenda.end);
-    formData.append('category', newAgenda.category);
-    if (newAgenda.file) formData.append('file', newAgenda.file);
+	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+	const [selectedDay, setSelectedDay] = useState<Date>(new Date());
 
-    const res = await fetch('/api/admin/agenda', { method: 'POST', body: formData });
-    if (res.ok) {
-      setIsModalOpen(false);
-      fetchData();
-      setNewAgenda({ title: '',   description: '', start: '', end: '', category: 'RAPAT', file: null });
-    }
-  };
+	const [agendaForm, setAgendaForm] = useState<AgendaForm>({
+		title: "",
+		description: "",
+		start: "",
+		end: "",
+		category: "RAPAT",
+		file: null,
+	});
 
-  const tileContent = ({ date, view }: any) => {
-    if (view === 'month') {
-      const hasAgenda = agendas.some(a => new Date(a.start).toDateString() === date.toDateString());
-      return hasAgenda ? <div className="h-1.5 w-1.5 bg-[#0A8E9A] rounded-full mx-auto mt-1"></div> : null;
-    }
-  };
+	const fetchDashboardData = async () => {
+		setLoadingData(true);
+		try {
+			const [pdsRes, agendaRes] = await Promise.all([
+				fetch("/api/admin/pds"),
+				fetch("/api/admin/agenda"),
+			]);
 
-  return (
-    <div className="p-8 bg-[#F8F9FA] min-h-screen font-sans relative">
-      {/* CSS CUSTOM UNTUK KALENDER AGAR TIDAK BENTROK */}
-      <style>{`
-        .react-calendar { width: 100%; border: none; font-family: inherit; background: transparent; }
-        .react-calendar__tile--active { background: #0A8E9A !important; border-radius: 12px; color: white !important; }
-        .react-calendar__tile--now { background: #e6f4f5 !important; border-radius: 12px; color: #0A8E9A; font-weight: bold; }
-        .react-calendar__navigation button { font-weight: 800; color: #0A8E9A; font-size: 1.2rem; }
-        .react-calendar__month-view__weekdays { font-weight: 900; text-transform: uppercase; font-size: 0.7rem; color: #cbd5e1; }
-        .react-calendar__tile { padding: 1.5em 0.5em; font-weight: 600; }
-      `}</style>
+			const [pdsJson, agendaJson] = await Promise.all([pdsRes.json(), agendaRes.json()]);
 
-      {/* 1. STATS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total PDS" count={stats.total} icon={<FileText size={22}/>} color="pink" />
-        <StatCard title="Menunggu Approval" count={stats.pending} icon={<Clock size={22}/>} color="orange" />
-        <StatCard title="Sedang Survey" count={stats.ongoing} icon={<MapPin size={22}/>} color="purple" />
-        <StatCard title="Agenda" count={stats.todayEvent} icon={<CalIcon size={22}/>} color="green" />
-      </div>
+			if (pdsJson.success) {
+				setPdsList(pdsJson.data || []);
+			}
 
-      <div className="grid grid-cols-12 gap-8">
-        {/* 2. CALENDAR SECTION */}
-        <div className="col-span-12 lg:col-span-8 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 h-fit">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-black italic text-[#202c45]">Agenda BKI Surabaya</h2>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="bg-[#0A8E9A] text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest shadow-lg hover:bg-teal-700 transition-all active:scale-95"
-            >
-              <Plus size={18} /> Tambah Agenda
-            </button>
-          </div>
+			if (agendaJson.success) {
+				setAgendaList(agendaJson.data || []);
+			}
+		} catch (error) {
+			console.error("Gagal memuat data dashboard:", error);
+		} finally {
+			setLoadingData(false);
+		}
+	};
 
-          <Calendar 
-            // Perubahan di sini: Paksa tipe datanya agar sesuai dengan ekspektasi react-calendar
-            onChange={(value) => setDate(value as Date)} 
-            value={date} 
-            tileContent={tileContent}
-            onClickDay={(value: Date) => {
-            // Memastikan format tanggal lokal untuk input datetime-local (YYYY-MM-DDTHH:mm)
-              const tzOffset = value.getTimezoneOffset() * 60000;
-              const localISOTime = new Date(value.getTime() - tzOffset).toISOString().slice(0, 16);
-    
-              setNewAgenda({ ...newAgenda, start: localISOTime });
-              setIsModalOpen(true);
-            }}
-          />
-        </div>
+	useEffect(() => {
+		fetchDashboardData();
+	}, []);
 
-        {/* 3. SIDEBAR */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-            <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-6 flex items-center gap-2">
-              <Bell size={16} className="text-orange-500" /> Aktivitas Terbaru
-            </h3>
-            <div className="space-y-8">
-              <ActivityItem text="Surveyor baru saja upload bukti" time="Baru saja" />
-              <ActivityItem text="Rapat Bulanan Kapal telah dijadwalkan" time="2 jam yang lalu" />
-              <ActivityItem text="PDS Terminal Teluk Lamong disetujui" time="5 jam yang lalu" />
-            </div>
-          </div>
+	const stats = useMemo(() => {
+		const totalPds = pdsList.length;
+		const waitingApproval = pdsList.filter((item) => item.status === "PENDING").length;
+		const activeSurveyor = new Set(
+			pdsList
+				.filter((item) => item.status !== "COMPLETED" && item.user?.id)
+				.map((item) => item.user!.id)
+		).size;
 
-          <div className="bg-[#0A8E9A] p-8 rounded-[2.5rem] text-white shadow-xl italic relative overflow-hidden group">
-            <div className="relative z-10">
-              <h3 className="font-black text-xl mb-2 tracking-tight">Laporan Excel</h3>
-              <p className="text-[11px] text-teal-100 mb-6 leading-relaxed font-medium">Rekap otomatis semua data PDS Surveyor.</p>
-              <button className="w-full bg-white text-[#0A8E9A] py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95">
-                Download <ChevronRight size={16} />
-              </button>
-            </div>
-            <FileText size={140} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
-          </div>
-        </div>
-      </div>
+		return {
+			totalPds,
+			waitingApproval,
+			activeSurveyor,
+			totalAgenda: agendaList.length,
+		};
+	}, [agendaList.length, pdsList]);
 
-      {/* --- MODAL FIX MENGGUNAKAN REACT PORTAL --- */}
-      {isModalOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center z-[999999]">
-          {/* Gelapkan Background */}
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-md" 
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-          
-          {/* Konten Modal */}
-          <div className="bg-white p-10 rounded-[3rem] rounded-xl max-w-lg shadow-2xl relative z-[1000000] mx-4 animate-in fade-in zoom-in duration-300">
-            <button 
-              onClick={() => setIsModalOpen(false)} 
-              className="absolute top-8 right-8 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-all"
-            >
-              <X size={28} />
-            </button>
-            
-            <h3 className="text-3xl font-black italic text-[#0A8E9A] mb-8 tracking-tighter">Agenda Baru</h3>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block ml-1">Judul Agenda</label>
-                <input 
-                  type="text" 
-                  placeholder="Nama kegiatan..." 
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-teal-500"
-                  onChange={(e) => setNewAgenda({...newAgenda, title: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block ml-1">Judul Agenda</label>
-                <input 
-                  type="text" 
-                  placeholder="Deskripsi" 
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-teal-500"
-                  onChange={(e) => setNewAgenda({...newAgenda, description: e.target.value})}
-                />
-              </div>
+	const activities = useMemo(() => {
+		return [...pdsList]
+			.sort((a, b) => {
+				const dateA = new Date(a.tanggalPengajuan || a.tglBerangkat).getTime();
+				const dateB = new Date(b.tanggalPengajuan || b.tglBerangkat).getTime();
+				return dateB - dateA;
+			})
+			.slice(0, 8);
+	}, [pdsList]);
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block ml-1">Mulai</label>
-                  <input type="datetime-local" className="bg-gray-50 rounded-2xl p-4 text-xs font-bold outline-none w-full" value={newAgenda.start.slice(0, 16)} onChange={(e) => setNewAgenda({...newAgenda, start: e.target.value})} />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block ml-1">Selesai</label>
-                  <input type="datetime-local" className="bg-gray-50 rounded-2xl p-4 text-xs font-bold outline-none w-full" onChange={(e) => setNewAgenda({...newAgenda, end: e.target.value})} />
-                </div>
-              </div>
+	const monthDays = useMemo(() => {
+		const year = selectedDate.getFullYear();
+		const month = selectedDate.getMonth();
 
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block ml-1">Lampiran</label>
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-[2rem] cursor-pointer hover:bg-gray-50 transition-all">
-                  <Upload size={24} className="text-gray-400 mb-2" />
-                  <span className="text-[10px] font-bold text-gray-500 px-4 text-center">
-                    {newAgenda.file ? newAgenda.file.name : "Klik untuk upload Surat Tugas / Lampiran"}
-                  </span>
-                  <input type="file" className="hidden" onChange={(e) => setNewAgenda({...newAgenda, file: e.target.files?.[0] || null})} />
-                </label>
-              </div>
+		const firstDay = new Date(year, month, 1);
+		const lastDay = new Date(year, month + 1, 0);
+		const leadingEmptyCount = firstDay.getDay();
 
-              <button 
-                onClick={handleSave} 
-                className="w-full bg-[#0A8E9A] text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl hover:bg-teal-700 transition-all active:scale-95"
-              >
-                Simpan Agenda
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
+		const slots: Array<Date | null> = [];
 
-// Komponen Helper
-function StatCard({ title, count, icon, color }: any) {
-  const themes: any = {
-    pink: { bg: "bg-pink-50", text: "text-pink-600", icon: "bg-pink-100", border: "border-pink-100" },
-    orange: { bg: "bg-orange-50", text: "text-orange-600", icon: "bg-orange-100", border: "border-orange-100" },
-    purple: { bg: "bg-purple-50", text: "text-purple-600", icon: "bg-purple-100", border: "border-purple-100" },
-    green: { bg: "bg-green-50", text: "text-green-600", icon: "bg-green-100", border: "border-green-100" },
-  };
-  const t = themes[color];
-  return (
-    <div className={`${t.bg} ${t.border} p-6 rounded-[2.5rem] border flex items-center gap-5 shadow-sm`}>
-      <div className={`p-4 rounded-2xl ${t.icon} ${t.text}`}>{icon}</div>
-      <div>
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-2">{title}</p>
-        <p className="text-3xl font-black text-gray-900 leading-none">{count}</p>
-      </div>
-    </div>
-  );
-}
+		for (let i = 0; i < leadingEmptyCount; i += 1) {
+			slots.push(null);
+		}
 
-function ActivityItem({ text, time }: any) {
-  return (
-    <div className="relative pl-6 border-l-2 border-teal-100">
-      <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-[#0A8E9A]"></div>
-      <p className="text-sm font-bold text-gray-800 leading-tight">{text}</p>
-      <p className="text-[10px] font-black text-gray-400 mt-2 uppercase tracking-wider">{time}</p>
-    </div>
-  );
+		for (let day = 1; day <= lastDay.getDate(); day += 1) {
+			slots.push(new Date(year, month, day));
+		}
+
+		while (slots.length % 7 !== 0) {
+			slots.push(null);
+		}
+
+		return slots;
+	}, [selectedDate]);
+
+	const formatInputDate = (date: Date) => {
+		const year = date.getFullYear();
+		const month = `${date.getMonth() + 1}`.padStart(2, "0");
+		const day = `${date.getDate()}`.padStart(2, "0");
+		return `${year}-${month}-${day}`;
+	};
+
+	const formatDateLabel = (dateString?: string) => {
+		if (!dateString) return "-";
+		const date = new Date(dateString);
+		return date.toLocaleDateString("id-ID", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		});
+	};
+
+	const isSameDay = (a: Date, b: Date) => {
+		return (
+			a.getFullYear() === b.getFullYear() &&
+			a.getMonth() === b.getMonth() &&
+			a.getDate() === b.getDate()
+		);
+	};
+
+	const agendaForSelectedDay = useMemo(() => {
+		return agendaList.filter((agenda) => {
+			const start = new Date(agenda.start);
+			const end = new Date(agenda.end);
+			const normalizedSelected = new Date(
+				selectedDay.getFullYear(),
+				selectedDay.getMonth(),
+				selectedDay.getDate(),
+				12,
+				0,
+				0
+			);
+
+			return normalizedSelected >= start && normalizedSelected <= end;
+		});
+	}, [agendaList, selectedDay]);
+
+	const agendaDayMap = useMemo(() => {
+		const map = new Set<string>();
+
+		agendaList.forEach((agenda) => {
+			const start = new Date(agenda.start);
+			const end = new Date(agenda.end);
+			const cursor = new Date(start);
+
+			while (cursor <= end) {
+				map.add(formatInputDate(cursor));
+				cursor.setDate(cursor.getDate() + 1);
+			}
+		});
+
+		return map;
+	}, [agendaList]);
+
+	const handleMonthChange = (direction: "prev" | "next") => {
+		setSelectedDate((prev) => {
+			const next = new Date(prev);
+			next.setMonth(direction === "prev" ? prev.getMonth() - 1 : prev.getMonth() + 1);
+			return next;
+		});
+	};
+
+	const handleDateSelect = (date: Date) => {
+		setSelectedDay(date);
+		const pickedDate = formatInputDate(date);
+
+		setAgendaForm((prev) => ({
+			...prev,
+			start: prev.start || pickedDate,
+			end: prev.end || pickedDate,
+		}));
+	};
+
+	const openAgendaModal = () => {
+		const pickedDate = formatInputDate(selectedDay);
+		setAgendaForm((prev) => ({
+			...prev,
+			start: prev.start || pickedDate,
+			end: prev.end || pickedDate,
+		}));
+		setIsAgendaModalOpen(true);
+	};
+
+	const handleSubmitAgenda = async (event: React.FormEvent) => {
+		event.preventDefault();
+
+		if (!agendaForm.start || !agendaForm.end) {
+			alert("Tanggal mulai dan tanggal berakhir harus diisi.");
+			return;
+		}
+
+		if (new Date(agendaForm.start) > new Date(agendaForm.end)) {
+			alert("Tanggal berakhir tidak boleh lebih awal dari tanggal mulai.");
+			return;
+		}
+
+		setSavingAgenda(true);
+
+		try {
+			const user = JSON.parse(localStorage.getItem("user") || "{}");
+			const payload = new FormData();
+
+			payload.append("title", agendaForm.title);
+			payload.append("description", agendaForm.description);
+			payload.append("start", agendaForm.start);
+			payload.append("end", agendaForm.end);
+			payload.append("category", agendaForm.category);
+			payload.append("createdBy", String(user?.id || ""));
+
+			if (agendaForm.file) {
+				payload.append("file", agendaForm.file);
+			}
+
+			const response = await fetch("/api/admin/agenda", {
+				method: "POST",
+				body: payload,
+			});
+
+			const result = await response.json();
+
+			if (!result.success) {
+				alert(result.message || result.error || "Gagal menambah agenda.");
+				return;
+			}
+
+			alert("Agenda berhasil ditambahkan.");
+			setAgendaForm({
+				title: "",
+				description: "",
+				start: "",
+				end: "",
+				category: "RAPAT",
+				file: null,
+			});
+			setIsAgendaModalOpen(false);
+
+			await fetchDashboardData();
+		} catch (error) {
+			console.error("Gagal menambah agenda:", error);
+			alert("Terjadi kesalahan saat menambah agenda.");
+		} finally {
+			setSavingAgenda(false);
+		}
+	};
+
+	const getStatusLabel = (status: PdsItem["status"]) => {
+		if (status === "PENDING") return "Menunggu Approval";
+		if (status === "APPROVED") return "Aktif Survey";
+		return "Selesai";
+	};
+
+	const getStatusClass = (status: PdsItem["status"]) => {
+		if (status === "PENDING") return "bg-amber-100 text-amber-800";
+		if (status === "APPROVED") return "bg-sky-100 text-sky-800";
+		return "bg-emerald-100 text-emerald-800";
+	};
+
+	return (
+		<div className="min-h-screen bg-gradient-to-br from-sky-50 via-teal-50 to-emerald-50 p-6 md:p-8">
+			<div className="mx-auto max-w-7xl space-y-6">
+				<h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+					Dashboard Admin PDS
+				</h1>
+
+				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					<article className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-cyan-900">Total PDS Saat Ini</p>
+							<ClipboardList className="text-cyan-700" size={20} />
+						</div>
+						<p className="text-3xl font-black text-cyan-900">{stats.totalPds}</p>
+					</article>
+
+					<article className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-amber-900">Menunggu Approval Admin</p>
+							<Clock3 className="text-amber-600" size={20} />
+						</div>
+						<p className="text-3xl font-black text-amber-900">{stats.waitingApproval}</p>
+					</article>
+
+					<article className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-sky-900">Surveyor Aktif Survey</p>
+							<Users className="text-sky-700" size={20} />
+						</div>
+						<p className="text-3xl font-black text-sky-900">{stats.activeSurveyor}</p>
+					</article>
+
+					<article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-emerald-900">Agenda Kalender</p>
+							<Calendar className="text-emerald-700" size={20} />
+						</div>
+						<p className="text-3xl font-black text-emerald-900">{stats.totalAgenda}</p>
+					</article>
+				</section>
+
+				<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+						<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+							<h2 className="text-xl font-black text-slate-900">Kalender Agenda</h2>
+							<div className="flex flex-wrap items-center gap-2">
+								<button
+									type="button"
+									onClick={openAgendaModal}
+									className="rounded-lg bg-cyan-700 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-cyan-800"
+								>
+									+ Tambah Agenda
+								</button>
+								<button
+									type="button"
+									onClick={() => handleMonthChange("prev")}
+									className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+								>
+									Sebelumnya
+								</button>
+								<p className="min-w-48 text-center text-sm font-bold text-slate-700">
+									{MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+								</p>
+								<button
+									type="button"
+									onClick={() => handleMonthChange("next")}
+									className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+								>
+									Berikutnya
+								</button>
+							</div>
+						</div>
+
+						<div className="overflow-hidden rounded-2xl border border-slate-200">
+							<div className="grid grid-cols-7 bg-slate-100">
+							{DAY_NAMES.map((dayName) => (
+								<div
+									key={dayName}
+									className="border-b border-r border-slate-200 py-3 text-center text-xs font-black uppercase text-slate-600 last:border-r-0"
+								>
+									{dayName}
+								</div>
+							))}
+
+							{monthDays.map((date, index) => {
+								const isLastColumn = index % 7 === 6;
+								const cellBorderClass = isLastColumn
+									? "border-b border-slate-200"
+									: "border-b border-r border-slate-200";
+
+								if (!date) {
+									return (
+										<div key={`empty-${index}`} className={`min-h-24 bg-slate-50 ${cellBorderClass}`} />
+									);
+								}
+
+								const dateKey = formatInputDate(date);
+								const hasAgenda = agendaDayMap.has(dateKey);
+								const active = isSameDay(date, selectedDay);
+
+								return (
+									<button
+										key={dateKey}
+										type="button"
+										onClick={() => handleDateSelect(date)}
+										className={`relative min-h-24 p-2 text-left transition ${cellBorderClass} ${
+											active
+												? "bg-cyan-100"
+												: "bg-white hover:bg-sky-50"
+										}`}
+									>
+										<p className="text-sm font-bold text-slate-800">{date.getDate()}</p>
+										{hasAgenda && (
+											<span className="absolute bottom-2 left-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+												Agenda
+											</span>
+										)}
+									</button>
+								);
+							})}
+							</div>
+						</div>
+
+						<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+							<p className="mb-3 text-sm font-bold text-slate-700">
+								Agenda pada {formatDateLabel(selectedDay.toISOString())}
+							</p>
+
+							{agendaForSelectedDay.length === 0 ? (
+								<p className="text-sm text-slate-500">Belum ada agenda di tanggal ini.</p>
+							) : (
+								<div className="space-y-2">
+									{agendaForSelectedDay.map((agenda) => (
+										<div
+											key={agenda.id}
+											className="rounded-xl border border-slate-200 bg-white p-3"
+										>
+											<div className="flex items-start justify-between gap-2">
+												<p className="font-bold text-slate-900">{agenda.title}</p>
+												<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+													{agenda.category}
+												</span>
+											</div>
+											<p className="mt-1 text-sm text-slate-600">{agenda.description || "-"}</p>
+											<p className="mt-2 text-xs text-slate-500">
+												{formatDateLabel(agenda.start)} - {formatDateLabel(agenda.end)}
+											</p>
+											{agenda.fileUrl && (
+												<a
+													href={agenda.fileUrl}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="mt-2 inline-flex text-xs font-semibold text-cyan-700 hover:underline"
+												>
+													Lihat Lampiran
+												</a>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+				</section>
+
+				{isAgendaModalOpen && (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+						<div className="w-full max-w-2xl rounded-3xl border border-cyan-100 bg-white shadow-2xl">
+							<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+								<h2 className="text-lg font-black text-slate-900 md:text-xl">Tambah Agenda Baru</h2>
+								<button
+									type="button"
+									onClick={() => setIsAgendaModalOpen(false)}
+									className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+								>
+									<X size={18} />
+								</button>
+							</div>
+
+							<form onSubmit={handleSubmitAgenda} className="space-y-3 p-5 md:p-6">
+								<div className="space-y-1">
+									<label className="text-xs font-bold uppercase text-slate-600">Judul</label>
+									<input
+										type="text"
+										value={agendaForm.title}
+										onChange={(e) => setAgendaForm((prev) => ({ ...prev, title: e.target.value }))}
+										className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+										required
+									/>
+								</div>
+
+								<div className="space-y-1">
+									<label className="text-xs font-bold uppercase text-slate-600">Deskripsi</label>
+									<textarea
+										value={agendaForm.description}
+										onChange={(e) => setAgendaForm((prev) => ({ ...prev, description: e.target.value }))}
+										className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+										required
+									/>
+								</div>
+
+								<div className="space-y-1">
+									<label className="text-xs font-bold uppercase text-slate-600">Kategori</label>
+									<select
+										value={agendaForm.category}
+										onChange={(e) =>
+											setAgendaForm((prev) => ({
+												...prev,
+												category: e.target.value as AgendaForm["category"],
+											}))
+										}
+										className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+									>
+										<option value="RAPAT">Rapat</option>
+										<option value="DINAS">Dinas</option>
+										<option value="URGENT">Urgent</option>
+										<option value="EVENT">Event</option>
+										<option value="LAINNYA">Lainnya</option>
+									</select>
+								</div>
+
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+									<div className="space-y-1">
+										<label className="text-xs font-bold uppercase text-slate-600">Tanggal Mulai</label>
+										<input
+											type="date"
+											value={agendaForm.start}
+											onChange={(e) => setAgendaForm((prev) => ({ ...prev, start: e.target.value }))}
+											className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+											required
+										/>
+									</div>
+									<div className="space-y-1">
+										<label className="text-xs font-bold uppercase text-slate-600">Tanggal Selesai</label>
+										<input
+											type="date"
+											value={agendaForm.end}
+											onChange={(e) => setAgendaForm((prev) => ({ ...prev, end: e.target.value }))}
+											className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+											required
+										/>
+									</div>
+								</div>
+
+								<div className="space-y-1">
+									<label className="text-xs font-bold uppercase text-slate-600">File Lampiran</label>
+									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-cyan-300 bg-cyan-50 px-3 py-2 text-sm text-cyan-900 hover:bg-cyan-100">
+										<Plus size={14} />
+										<span>{agendaForm.file?.name || "Tambah File"}</span>
+										<input
+											type="file"
+											onChange={(e) =>
+												setAgendaForm((prev) => ({
+													...prev,
+													file: e.target.files && e.target.files[0] ? e.target.files[0] : null,
+												}))
+											}
+											className="hidden"
+										/>
+									</label>
+								</div>
+
+								<div className="flex flex-col gap-2 pt-2 md:flex-row md:justify-end">
+									<button
+										type="button"
+										onClick={() => setIsAgendaModalOpen(false)}
+										className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"
+									>
+										Batal
+									</button>
+									<button
+										type="submit"
+										disabled={savingAgenda}
+										className="flex items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
+									>
+										{savingAgenda ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+										{savingAgenda ? "Menyimpan..." : "Simpan Agenda"}
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				)}
+
+				<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+					<h2 className="mb-4 text-xl font-black text-slate-900">Recent Activity Surveyor</h2>
+
+					{loadingData ? (
+						<div className="flex items-center gap-2 text-sm text-slate-600">
+							<Loader2 size={16} className="animate-spin" />
+							Memuat aktivitas terbaru...
+						</div>
+					) : activities.length === 0 ? (
+						<p className="text-sm text-slate-500">Belum ada aktivitas surveyor.</p>
+					) : (
+						<div className="space-y-3">
+							{activities.map((item) => (
+								<div
+									key={item.id}
+									className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between"
+								>
+									<div className="space-y-1">
+										<div className="flex items-center gap-2 text-sm text-slate-800">
+											<UserRound size={14} className="text-slate-500" />
+											<p className="font-bold">{item.user?.nama || "Surveyor"}</p>
+										</div>
+										<p className="text-sm text-slate-700">
+											Mengajukan {item.permohonan} untuk {item.lokasi}
+										</p>
+										<div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+											<span className="inline-flex items-center gap-1">
+												<Calendar size={12} />
+												Pengajuan: {formatDateLabel(item.tanggalPengajuan)}
+											</span>
+											<span className="inline-flex items-center gap-1">
+												<MapPin size={12} />
+												{item.lokasi}
+											</span>
+										</div>
+									</div>
+									<span
+										className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(
+											item.status
+										)}`}
+									>
+										{getStatusLabel(item.status)}
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+				</section>
+			</div>
+		</div>
+	);
 }

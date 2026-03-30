@@ -11,9 +11,11 @@ export async function POST(req: NextRequest) {
     const start = formData.get('start') as string;
     const end = formData.get('end') as string;
     const category = formData.get('category') as string;
+    const createdByRaw = formData.get('createdBy') as string;
     const file = formData.get('file') as File | null;
 
     let fileUrl = '';
+    let namaFile = '';
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // Batasi ukuran file 5MB
         return NextResponse.json({ success: false, message: 'Ukuran file terlalu besar. Maksimal 5MB.' }, { status: 400 });
@@ -26,11 +28,16 @@ export async function POST(req: NextRequest) {
       await mkdir(uploadDir, { recursive: true });
       await writeFile(path.join(uploadDir, filename), buffer);
       fileUrl = `/uploads/agendas/${filename}`;
+      namaFile = file.name;
     }
+
+    const createdBy = Number(createdByRaw);
 
     const agenda = await Agenda.create({
       title, description, start, end, category,
       fileUrl: fileUrl || null,
+      namaFile: namaFile || null,
+      createdBy: Number.isFinite(createdBy) ? createdBy : null,
       color: category === 'URGENT' ? '#ef4444' : '#0A8E9A'
     });
 
