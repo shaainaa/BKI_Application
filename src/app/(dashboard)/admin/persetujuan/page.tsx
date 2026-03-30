@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Edit, 
   FileText, 
-  X, 
-  Search, 
   Calendar, 
-  XCircle, 
+  XCircle,
   Check, 
-  Eye, 
-  ExternalLink, 
+  Eye,
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
@@ -32,6 +29,14 @@ export default function AdminPersetujuanPDS() {
     nominal: '',
     sps: '',
     so: ''
+  });
+
+  const [filters, setFilters] = useState({
+    nama: '',
+    lokasi: '',
+    permohonan: '',
+    tanggal: '',
+    keperluan: '',
   });
 
   const fetchAllPds = async () => {
@@ -111,6 +116,40 @@ export default function AdminPersetujuanPDS() {
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const formatDateInput = (dateString: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  };
+
+  const filterOptions = useMemo(() => {
+    const nama = Array.from(new Set(listPds.map((item: any) => item.user?.nama || item.user?.name).filter(Boolean)));
+    const lokasi = Array.from(new Set(listPds.map((item: any) => item.lokasi).filter(Boolean)));
+    const permohonan = Array.from(new Set(listPds.map((item: any) => item.permohonan).filter(Boolean)));
+    const keperluan = Array.from(new Set(listPds.map((item: any) => item.keperluan).filter(Boolean)));
+
+    return { nama, lokasi, permohonan, keperluan };
+  }, [listPds]);
+
+  const filteredPds = useMemo(() => {
+    return listPds.filter((item: any) => {
+      const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
+      const lokasi = (item.lokasi || '').toLowerCase();
+      const permohonan = (item.permohonan || '').toLowerCase();
+      const keperluan = (item.keperluan || '').toLowerCase();
+      const itemDate = formatDateInput(item.tanggalPengajuan);
+
+      const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
+      const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
+      const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
+      const matchTanggal = !filters.tanggal || itemDate === filters.tanggal;
+      const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+
+      return matchNama && matchLokasi && matchPermohonan && matchTanggal && matchKeperluan;
+    });
+  }, [listPds, filters]);
+
   return (
     <div className="p-8 bg-[#f8f9fa] min-h-screen font-sans">
       <h1 className="text-[40px] font-bold text-[#202c45] mb-8 tracking-tight">Persetujuan PDS</h1>
@@ -120,14 +159,54 @@ export default function AdminPersetujuanPDS() {
         <div className="mb-6">
           <p className="font-semibold text-gray-700 mb-3 text-sm">Filter</p>
           <div className="flex gap-4 flex-wrap">
-            <select className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"><option>Nama</option></select>
-            <select className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"><option>Lokasi</option></select>
-            <select className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"><option>Jenis</option></select>
+            <select
+              value={filters.nama}
+              onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
+              className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+            >
+              <option value="">Semua Nama</option>
+              {filterOptions.nama.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+            <select
+              value={filters.lokasi}
+              onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
+              className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+            >
+              <option value="">Semua Lokasi</option>
+              {filterOptions.lokasi.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+            <select
+              value={filters.permohonan}
+              onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
+              className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+            >
+              <option value="">Semua Jenis</option>
+              {filterOptions.permohonan.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
             <div className="relative flex-1 min-w-[150px]">
-              <input type="text" placeholder="Tanggal" className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500" />
-              <Calendar className="absolute right-4 top-2.5 text-gray-400" size={18} />
+              <input
+                type="date"
+                value={filters.tanggal}
+                onChange={(e) => setFilters((prev) => ({ ...prev, tanggal: e.target.value }))}
+                className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
+              />
             </div>
-            <select className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"><option>Keperluan</option></select>
+            <select
+              value={filters.keperluan}
+              onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
+              className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+            >
+              <option value="">Semua Keperluan</option>
+              {filterOptions.keperluan.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -149,15 +228,18 @@ export default function AdminPersetujuanPDS() {
               {loading ? (
                 <tr><td colSpan={7} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
               ) : (
-                listPds.map((data: any) => (
+                filteredPds.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
+                ) : (
+                filteredPds.map((data: any) => (
                   <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
                     <td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
                     <td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
-                    <td className="py-4 px-6 text-center uppercase">{data.jenis || 'PDS'}</td>
+                    <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                     <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
                     <td className="py-4 px-6 text-center">
-                      <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${
+                      <span className={`px-6 py-1 rounded-full text-[10px] font-black tracking-widest ${
                         data.status === 'PENDING' ? 'bg-red-50 text-red-600' : 
                         data.status === 'APPROVED' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-teal-700'
                       }`}>
@@ -183,6 +265,7 @@ export default function AdminPersetujuanPDS() {
                     </td>
                   </tr>
                 ))
+                )
               )}
             </tbody>
           </table>

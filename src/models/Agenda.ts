@@ -16,14 +16,9 @@ const Agenda = sequelize.define('Agenda', {
     type: DataTypes.ENUM('RAPAT', 'DINAS', 'URGENT', 'EVENT', 'LAINNYA'),
     defaultValue: 'RAPAT'
   },
-  color: { type: DataTypes.STRING, defaultValue: '#0A8E9A' },
   fileUrl: {
     type: DataTypes.STRING,
     allowNull: true, // Opsional jika agenda tidak pakai lampiran
-  },
-  namaFile: {
-    type: DataTypes.STRING,
-    allowNull: true,
   },
   createdBy: { type: DataTypes.INTEGER }
 }, {

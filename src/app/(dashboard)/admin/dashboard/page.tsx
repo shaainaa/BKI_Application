@@ -35,9 +35,7 @@ type AgendaItem = {
 	start: string;
 	end: string;
 	category: "RAPAT" | "DINAS" | "URGENT" | "EVENT" | "LAINNYA";
-	color?: string;
 	fileUrl?: string | null;
-	namaFile?: string | null;
 };
 
 type AgendaForm = {
@@ -181,6 +179,24 @@ export default function AdminDashboardPage() {
 		});
 	};
 
+	const formatDateFromDate = (date: Date) => {
+		return date.toLocaleDateString("id-ID", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		});
+	};
+
+	const toStartOfDay = (value: Date | string) => {
+		const date = new Date(value);
+		return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+	};
+
+	const toEndOfDay = (value: Date | string) => {
+		const date = new Date(value);
+		return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+	};
+
 	const isSameDay = (a: Date, b: Date) => {
 		return (
 			a.getFullYear() === b.getFullYear() &&
@@ -190,19 +206,13 @@ export default function AdminDashboardPage() {
 	};
 
 	const agendaForSelectedDay = useMemo(() => {
-		return agendaList.filter((agenda) => {
-			const start = new Date(agenda.start);
-			const end = new Date(agenda.end);
-			const normalizedSelected = new Date(
-				selectedDay.getFullYear(),
-				selectedDay.getMonth(),
-				selectedDay.getDate(),
-				12,
-				0,
-				0
-			);
+		const selectedStart = toStartOfDay(selectedDay);
 
-			return normalizedSelected >= start && normalizedSelected <= end;
+		return agendaList.filter((agenda) => {
+			const start = toStartOfDay(agenda.start);
+			const end = toEndOfDay(agenda.end);
+
+			return selectedStart >= start && selectedStart <= end;
 		});
 	}, [agendaList, selectedDay]);
 
@@ -210,8 +220,8 @@ export default function AdminDashboardPage() {
 		const map = new Set<string>();
 
 		agendaList.forEach((agenda) => {
-			const start = new Date(agenda.start);
-			const end = new Date(agenda.end);
+			const start = toStartOfDay(agenda.start);
+			const end = toStartOfDay(agenda.end);
 			const cursor = new Date(start);
 
 			while (cursor <= end) {
@@ -450,7 +460,7 @@ export default function AdminDashboardPage() {
 
 						<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
 							<p className="mb-3 text-sm font-bold text-slate-700">
-								Agenda pada {formatDateLabel(selectedDay.toISOString())}
+								Agenda pada {formatDateFromDate(selectedDay)}
 							</p>
 
 							{agendaForSelectedDay.length === 0 ? (
