@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Edit, 
   FileText, 
-  Calendar, 
   XCircle,
   Check, 
   Eye,
@@ -14,14 +13,49 @@ import {
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 
+type PdsStatus = 'PENDING' | 'APPROVED' | 'COMPLETED';
+
+interface PdsUser {
+  nama?: string;
+  name?: string;
+  email?: string;
+}
+
+interface BuktiItem {
+  kategori: 'SURVEY' | 'TRANSPORTASI' | 'PENGINAPAN' | 'LAINNYA';
+  fileUrl: string;
+  namaFile?: string;
+  updatedAt?: string;
+}
+
+interface PdsItem {
+  id: number;
+  user?: PdsUser | null;
+  lokasi: string;
+  tanggalPengajuan: string;
+  permohonan?: string;
+  keperluan: string;
+  status: PdsStatus;
+  nominalPDS?: string | number | null;
+  sps?: string | null;
+  so?: string | null;
+  nomorPdsTrans?: string | null;
+  bukti?: BuktiItem[];
+}
+
+interface PdsApiResponse {
+  success: boolean;
+  data: PdsItem[];
+}
+
 export default function AdminPersetujuanPDS() {
-  const [listPds, setListPds] = useState<any[]>([]);
+  const [listPds, setListPds] = useState<PdsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // State untuk Modal & Preview
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPds, setSelectedPds] = useState<any>(null);
-  const [previewData, setPreviewData] = useState<any>(null); 
+  const [selectedPds, setSelectedPds] = useState<PdsItem | null>(null);
+  const [previewData, setPreviewData] = useState<PdsItem | null>(null);
 
   // State Input Admin (Sesuai kolom baru di DB)
   const [adminInput, setAdminInput] = useState({
@@ -44,7 +78,7 @@ export default function AdminPersetujuanPDS() {
     try {
       // Pastikan API Admin me-return data PDS + include User + include BuktiPds
       const res = await fetch('/api/admin/pds');
-      const result = await res.json();
+      const result = (await res.json()) as PdsApiResponse;
       if (result.success) setListPds(result.data);
     } catch (err) {
       console.error("Gagal mengambil data admin:", err);
@@ -55,7 +89,7 @@ export default function AdminPersetujuanPDS() {
 
   useEffect(() => { fetchAllPds(); }, []);
 
-  const handleOpenModal = (pds: any) => {
+  const handleOpenModal = (pds: PdsItem) => {
     setSelectedPds(pds);
     // Masukkan data lama jika sudah pernah diisi
     setAdminInput({
@@ -80,7 +114,7 @@ export default function AdminPersetujuanPDS() {
         alert("Status diperbarui: APPROVED");
         fetchAllPds();
       }
-    } catch (err) { alert("Terjadi kesalahan jaringan"); }
+    } catch { alert("Terjadi kesalahan jaringan"); }
   };
 
   const handleKirimFormAkhir = async () => {
@@ -107,7 +141,7 @@ export default function AdminPersetujuanPDS() {
         setIsModalOpen(false);
         fetchAllPds();
       }
-    } catch (err) { alert("Gagal memproses data"); }
+    } catch { alert("Gagal memproses data"); }
   };
 
   const formatDate = (dateString: string) => {
@@ -124,16 +158,16 @@ export default function AdminPersetujuanPDS() {
   };
 
   const filterOptions = useMemo(() => {
-    const nama = Array.from(new Set(listPds.map((item: any) => item.user?.nama || item.user?.name).filter(Boolean)));
-    const lokasi = Array.from(new Set(listPds.map((item: any) => item.lokasi).filter(Boolean)));
-    const permohonan = Array.from(new Set(listPds.map((item: any) => item.permohonan).filter(Boolean)));
-    const keperluan = Array.from(new Set(listPds.map((item: any) => item.keperluan).filter(Boolean)));
+    const nama = Array.from(new Set(listPds.map((item) => item.user?.nama || item.user?.name).filter(Boolean)));
+    const lokasi = Array.from(new Set(listPds.map((item) => item.lokasi).filter(Boolean)));
+    const permohonan = Array.from(new Set(listPds.map((item) => item.permohonan).filter(Boolean)));
+    const keperluan = Array.from(new Set(listPds.map((item) => item.keperluan).filter(Boolean)));
 
     return { nama, lokasi, permohonan, keperluan };
   }, [listPds]);
 
   const filteredPds = useMemo(() => {
-    return listPds.filter((item: any) => {
+    return listPds.filter((item) => {
       const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
       const lokasi = (item.lokasi || '').toLowerCase();
       const permohonan = (item.permohonan || '').toLowerCase();
@@ -231,7 +265,7 @@ export default function AdminPersetujuanPDS() {
                 filteredPds.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
                 ) : (
-                filteredPds.map((data: any) => (
+                filteredPds.map((data) => (
                   <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
                     <td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
@@ -292,7 +326,7 @@ export default function AdminPersetujuanPDS() {
                 
                 <div className="grid grid-cols-1 gap-3">
                   {['SURVEY', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'].map((kat) => {
-                    const existingBukti = selectedPds.bukti?.find((b: any) => b.kategori === kat);
+                    const existingBukti = selectedPds.bukti?.find((b) => b.kategori === kat);
                     return (
                       <div key={kat} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
                         <div className="flex flex-col">
