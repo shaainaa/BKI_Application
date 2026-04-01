@@ -78,6 +78,8 @@ export default function AdminDashboardPage() {
 	const [deletingAgendaId, setDeletingAgendaId] = useState<number | null>(null);
 	const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
 	const [editingAgendaId, setEditingAgendaId] = useState<number | null>(null);
+	const [isDraggingSurat, setIsDraggingSurat] = useState(false);
+	const [isDraggingLampiran, setIsDraggingLampiran] = useState(false);
 
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	const [selectedDay, setSelectedDay] = useState<Date>(new Date());
@@ -237,6 +239,20 @@ export default function AdminDashboardPage() {
 			return selectedStart >= start && selectedStart <= end;
 		});
 	}, [agendaList, selectedDay]);
+
+	const agendaForSelectedMonth = useMemo(() => {
+		const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 0, 0, 0, 0);
+		const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+		return agendaList
+			.filter((agenda) => {
+				const agendaStart = new Date(agenda.start);
+				const agendaEnd = new Date(agenda.end);
+
+				return agendaEnd >= monthStart && agendaStart <= monthEnd;
+			})
+			.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+	}, [agendaList, selectedDate]);
 
 	const agendaDayMap = useMemo(() => {
 		const map = new Set<string>();
@@ -467,6 +483,30 @@ export default function AdminDashboardPage() {
 		}));
 	};
 
+	const preventDefaultDragBehavior = (event: React.DragEvent<HTMLElement>) => {
+		event.preventDefault();
+		event.stopPropagation();
+	};
+
+	const handleDropSurat = (event: React.DragEvent<HTMLLabelElement>) => {
+		preventDefaultDragBehavior(event);
+		setIsDraggingSurat(false);
+
+		const droppedFiles = event.dataTransfer.files;
+		if (!droppedFiles || droppedFiles.length === 0) return;
+
+		setAgendaForm((prev) => ({
+			...prev,
+			fileSurat: droppedFiles[0],
+		}));
+	};
+
+	const handleDropLampiran = (event: React.DragEvent<HTMLLabelElement>) => {
+		preventDefaultDragBehavior(event);
+		setIsDraggingLampiran(false);
+		handleAddLampiranFiles(event.dataTransfer.files);
+	};
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-sky-50 via-teal-50 to-emerald-50 p-6 md:p-8">
 			<div className="mx-auto max-w-7xl space-y-6">
@@ -591,14 +631,14 @@ export default function AdminDashboardPage() {
 
 						<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
 							<p className="mb-3 text-sm font-bold text-slate-700">
-								Agenda pada {formatDateFromDate(selectedDay)}
+								Agenda Bulan {MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getFullYear()}
 							</p>
 
-							{agendaForSelectedDay.length === 0 ? (
-								<p className="text-sm text-slate-500">Belum ada agenda di tanggal ini.</p>
+							{agendaForSelectedMonth.length === 0 ? (
+								<p className="text-sm text-slate-500">Belum ada agenda di bulan ini.</p>
 							) : (
 								<div className="space-y-2">
-									{agendaForSelectedDay.map((agenda) => {
+									{agendaForSelectedMonth.map((agenda) => {
 										const lampiranItems = parseLampiranFiles(
 											agenda.lampiranFiles,
 											agenda.lampiranList
@@ -759,9 +799,30 @@ export default function AdminDashboardPage() {
 									<label className="text-xs font-bold uppercase text-slate-600">
 										{editingAgendaId ? "File Surat (Opsional, untuk ganti file)" : "File Surat (Wajib)"}
 									</label>
-									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-cyan-300 bg-cyan-50 px-3 py-2 text-sm text-cyan-900 hover:bg-cyan-100">
+									<label
+										onDragEnter={(event) => {
+											preventDefaultDragBehavior(event);
+											setIsDraggingSurat(true);
+										}}
+										onDragOver={preventDefaultDragBehavior}
+										onDragLeave={(event) => {
+											preventDefaultDragBehavior(event);
+											setIsDraggingSurat(false);
+										}}
+										onDrop={handleDropSurat}
+										className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
+											isDraggingSurat
+												? "border-cyan-500 bg-cyan-100 text-cyan-900"
+												: "border-cyan-300 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
+										}`}
+									>
 										<Plus size={14} />
-										<span>{agendaForm.fileSurat?.name || (editingAgendaId ? "Biarkan kosong jika tidak diganti" : "Upload File Surat")}</span>
+										<span>
+											{agendaForm.fileSurat?.name ||
+												(editingAgendaId
+													? "Drop file di sini atau klik untuk ganti file surat"
+													: "Drop file surat di sini atau klik untuk upload")}
+										</span>
 										<input
 											type="file"
 											onChange={(e) =>
@@ -777,12 +838,28 @@ export default function AdminDashboardPage() {
 
 								<div className="space-y-1">
 									<label className="text-xs font-bold uppercase text-slate-600">File Lampiran (Opsional, Bisa Lebih dari 2)</label>
-									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 hover:bg-emerald-100">
+									<label
+										onDragEnter={(event) => {
+											preventDefaultDragBehavior(event);
+											setIsDraggingLampiran(true);
+										}}
+										onDragOver={preventDefaultDragBehavior}
+										onDragLeave={(event) => {
+											preventDefaultDragBehavior(event);
+											setIsDraggingLampiran(false);
+										}}
+										onDrop={handleDropLampiran}
+										className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
+											isDraggingLampiran
+												? "border-emerald-500 bg-emerald-100 text-emerald-900"
+												: "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+										}`}
+									>
 										<Plus size={14} />
 										<span>
 											{agendaForm.lampiranFiles.length > 0
 												? `${agendaForm.lampiranFiles.length} file dipilih`
-												: "Tambah Lampiran satu per satu"}
+												: "Drop lampiran di sini atau klik untuk tambah"}
 										</span>
 										<input
 											type="file"
