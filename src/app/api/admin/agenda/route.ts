@@ -12,33 +12,50 @@ export async function POST(req: NextRequest) {
     const end = formData.get('end') as string;
     const category = formData.get('category') as string;
     const createdByRaw = formData.get('createdBy') as string;
-    const file = formData.get('file') as File | null;
+    const fileSurat = formData.get('fileSurat') as File | null;
+    const lampiranFiles = formData.getAll('lampiranFiles').filter((item): item is File => item instanceof File);
 
-    let fileUrl = '';
-    let namaFile = '';
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // Batasi ukuran file 5MB
-        return NextResponse.json({ success: false, message: 'Ukuran file terlalu besar. Maksimal 5MB.' }, { status: 400 });
+    if (!fileSurat) {
+      return NextResponse.json({ success: false, message: 'File surat wajib diunggah.' }, { status: 400 });
+    }
+
+    if (fileSurat.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ success: false, message: 'Ukuran file surat terlalu besar. Maksimal 5MB.' }, { status: 400 });
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public/uploads/agendas');
+    await mkdir(uploadDir, { recursive: true });
+
+    const suratBuffer = Buffer.from(await fileSurat.arrayBuffer());
+    const suratFilename = `${Date.now()}_surat_${fileSurat.name.replace(/\s+/g, '_')}`;
+    await writeFile(path.join(uploadDir, suratFilename), suratBuffer);
+    const suratFileUrl = `/uploads/agendas/${suratFilename}`;
+
+    const lampiranPayload: Array<{ name: string; url: string }> = [];
+    for (const lampiran of lampiranFiles) {
+      if (lampiran.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ success: false, message: `Ukuran file lampiran ${lampiran.name} terlalu besar. Maksimal 5MB.` }, { status: 400 });
       }
-      
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const filename = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-      const uploadDir = path.join(process.cwd(), 'public/uploads/agendas');
-      
-      await mkdir(uploadDir, { recursive: true });
-      await writeFile(path.join(uploadDir, filename), buffer);
-      fileUrl = `/uploads/agendas/${filename}`;
-      namaFile = file.name;
+
+      const lampiranBuffer = Buffer.from(await lampiran.arrayBuffer());
+      const lampiranFilename = `${Date.now()}_lampiran_${lampiran.name.replace(/\s+/g, '_')}`;
+      await writeFile(path.join(uploadDir, lampiranFilename), lampiranBuffer);
+
+      lampiranPayload.push({
+        name: lampiran.name,
+        url: `/uploads/agendas/${lampiranFilename}`,
+      });
     }
 
     const createdBy = Number(createdByRaw);
 
     const agenda = await Agenda.create({
       title, description, start, end, category,
-      fileUrl: fileUrl || null,
-      namaFile: namaFile || null,
+      suratFileUrl,
+      suratNamaFile: fileSurat.name,
+      lampiranFiles: lampiranPayload.length > 0 ? JSON.stringify(lampiranPayload) : null,
+      fileUrl: suratFileUrl,
       createdBy: Number.isFinite(createdBy) ? createdBy : null,
-      color: category === 'URGENT' ? '#ef4444' : '#0A8E9A'
     });
 
     return NextResponse.json({ success: true, data: agenda });

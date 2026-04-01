@@ -34,7 +34,10 @@ type AgendaItem = {
 	description: string;
 	start: string;
 	end: string;
-	category: "RAPAT" | "DINAS" | "URGENT" | "EVENT" | "LAINNYA";
+	category: "RAPAT" | "DINAS" | "Familiarisasi Dokumen Teknik" | "URGENT" | "EVENT" | "LAINNYA";
+	suratFileUrl?: string | null;
+	suratNamaFile?: string | null;
+	lampiranFiles?: string | Array<{ name: string; url: string }> | null;
 	fileUrl?: string | null;
 };
 
@@ -43,8 +46,9 @@ type AgendaForm = {
 	description: string;
 	start: string;
 	end: string;
-	category: "RAPAT" | "DINAS" | "URGENT" | "EVENT" | "LAINNYA";
-	file: File | null;
+	category: "RAPAT" | "DINAS" | "Familiarisasi Dokumen Teknik" | "URGENT" | "EVENT" | "LAINNYA";
+	fileSurat: File | null;
+	lampiranFiles: File[];
 };
 
 const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -79,7 +83,8 @@ export default function AdminDashboardPage() {
 		start: "",
 		end: "",
 		category: "RAPAT",
-		file: null,
+		fileSurat: null,
+		lampiranFiles: [],
 	});
 
 	const fetchDashboardData = async () => {
@@ -275,6 +280,11 @@ export default function AdminDashboardPage() {
 			return;
 		}
 
+		if (!agendaForm.fileSurat) {
+			alert("File surat wajib diunggah.");
+			return;
+		}
+
 		setSavingAgenda(true);
 
 		try {
@@ -287,10 +297,11 @@ export default function AdminDashboardPage() {
 			payload.append("end", agendaForm.end);
 			payload.append("category", agendaForm.category);
 			payload.append("createdBy", String(user?.id || ""));
+			payload.append("fileSurat", agendaForm.fileSurat);
 
-			if (agendaForm.file) {
-				payload.append("file", agendaForm.file);
-			}
+			agendaForm.lampiranFiles.forEach((file) => {
+				payload.append("lampiranFiles", file);
+			});
 
 			const response = await fetch("/api/admin/agenda", {
 				method: "POST",
@@ -311,7 +322,8 @@ export default function AdminDashboardPage() {
 				start: "",
 				end: "",
 				category: "RAPAT",
-				file: null,
+				fileSurat: null,
+				lampiranFiles: [],
 			});
 			setIsAgendaModalOpen(false);
 
@@ -334,6 +346,19 @@ export default function AdminDashboardPage() {
 		if (status === "PENDING") return "bg-amber-100 text-amber-800";
 		if (status === "APPROVED") return "bg-sky-100 text-sky-800";
 		return "bg-emerald-100 text-emerald-800";
+	};
+
+	const parseLampiranFiles = (lampiranValue?: AgendaItem["lampiranFiles"]) => {
+		if (!lampiranValue) return [] as Array<{ name: string; url: string }>;
+
+		if (Array.isArray(lampiranValue)) return lampiranValue;
+
+		try {
+			const parsed = JSON.parse(lampiranValue);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
 	};
 
 	return (
@@ -482,15 +507,33 @@ export default function AdminDashboardPage() {
 											<p className="mt-2 text-xs text-slate-500">
 												{formatDateLabel(agenda.start)} - {formatDateLabel(agenda.end)}
 											</p>
-											{agenda.fileUrl && (
+											{(agenda.suratFileUrl || agenda.fileUrl) && (
 												<a
-													href={agenda.fileUrl}
+													href={agenda.suratFileUrl || agenda.fileUrl || "#"}
 													target="_blank"
 													rel="noopener noreferrer"
 													className="mt-2 inline-flex text-xs font-semibold text-cyan-700 hover:underline"
 												>
-													Lihat Lampiran
+													Lihat File Surat
 												</a>
+											)}
+											{parseLampiranFiles(agenda.lampiranFiles).length > 0 && (
+												<div className="mt-2 space-y-1">
+													<p className="text-xs font-semibold text-slate-600">Lampiran:</p>
+													<div className="flex flex-wrap gap-2">
+														{parseLampiranFiles(agenda.lampiranFiles).map((lampiran, index) => (
+															<a
+																key={`${agenda.id}-lampiran-${index}`}
+																href={lampiran.url}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex text-xs font-semibold text-teal-700 hover:underline"
+															>
+																{lampiran.name || `Lampiran ${index + 1}`}
+															</a>
+														))}
+													</div>
+												</div>
 											)}
 										</div>
 									))}
@@ -549,6 +592,7 @@ export default function AdminDashboardPage() {
 									>
 										<option value="RAPAT">Rapat</option>
 										<option value="DINAS">Dinas</option>
+										<option value="Familiarisasi Dokumen Teknik">Familiarisasi Dokumen Teknik</option>
 										<option value="URGENT">Urgent</option>
 										<option value="EVENT">Event</option>
 										<option value="LAINNYA">Lainnya</option>
@@ -579,21 +623,53 @@ export default function AdminDashboardPage() {
 								</div>
 
 								<div className="space-y-1">
-									<label className="text-xs font-bold uppercase text-slate-600">File Lampiran</label>
+									<label className="text-xs font-bold uppercase text-slate-600">File Surat (Wajib)</label>
 									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-cyan-300 bg-cyan-50 px-3 py-2 text-sm text-cyan-900 hover:bg-cyan-100">
 										<Plus size={14} />
-										<span>{agendaForm.file?.name || "Tambah File"}</span>
+										<span>{agendaForm.fileSurat?.name || "Upload File Surat"}</span>
 										<input
 											type="file"
 											onChange={(e) =>
 												setAgendaForm((prev) => ({
 													...prev,
-													file: e.target.files && e.target.files[0] ? e.target.files[0] : null,
+													fileSurat: e.target.files && e.target.files[0] ? e.target.files[0] : null,
 												}))
 											}
 											className="hidden"
 										/>
 									</label>
+								</div>
+
+								<div className="space-y-1">
+									<label className="text-xs font-bold uppercase text-slate-600">File Lampiran (Opsional, Bisa Lebih dari 2)</label>
+									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 hover:bg-emerald-100">
+										<Plus size={14} />
+										<span>
+											{agendaForm.lampiranFiles.length > 0
+												? `${agendaForm.lampiranFiles.length} file dipilih`
+												: "Upload Lampiran (boleh lebih dari 2 file)"}
+										</span>
+										<input
+											type="file"
+											multiple
+											onChange={(e) =>
+												setAgendaForm((prev) => ({
+													...prev,
+													lampiranFiles: e.target.files ? Array.from(e.target.files) : [],
+												}))
+											}
+											className="hidden"
+										/>
+									</label>
+									{agendaForm.lampiranFiles.length > 0 && (
+										<div className="space-y-1">
+											{agendaForm.lampiranFiles.map((file, index) => (
+												<p key={`${file.name}-${index}`} className="text-xs text-slate-600">
+													{index + 1}. {file.name}
+												</p>
+											))}
+										</div>
+									)}
 								</div>
 
 								<div className="flex flex-col gap-2 pt-2 md:flex-row md:justify-end">

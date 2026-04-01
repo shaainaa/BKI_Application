@@ -13,8 +13,20 @@ const Agenda = sequelize.define('Agenda', {
   start: { type: DataTypes.DATE, allowNull: false },
   end: { type: DataTypes.DATE, allowNull: false },
   category: {
-    type: DataTypes.ENUM('RAPAT', 'DINAS', 'URGENT', 'EVENT', 'LAINNYA'),
+    type: DataTypes.ENUM('RAPAT', 'DINAS', 'Familiarisasi Dokumen Teknik', 'URGENT', 'EVENT', 'LAINNYA'),
     defaultValue: 'RAPAT'
+  },
+  suratFileUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  suratNamaFile: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  lampiranFiles: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   },
   fileUrl: {
     type: DataTypes.STRING,
