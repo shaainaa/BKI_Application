@@ -7,7 +7,9 @@ import {
 	Clock3,
 	Loader2,
 	MapPin,
+	Pencil,
 	Plus,
+	Trash2,
 	UserRound,
 	Users,
 	X,
@@ -37,6 +39,7 @@ type AgendaItem = {
 	category: "RAPAT" | "DINAS" | "Familiarisasi Dokumen Teknik" | "URGENT" | "EVENT" | "LAINNYA";
 	suratFileUrl?: string | null;
 	suratNamaFile?: string | null;
+	lampiranList?: Array<{ id: number; namaFile: string; urlFile: string }>;
 	lampiranFiles?: string | Array<{ name: string; url: string }> | null;
 	fileUrl?: string | null;
 };
@@ -72,7 +75,9 @@ export default function AdminDashboardPage() {
 	const [agendaList, setAgendaList] = useState<AgendaItem[]>([]);
 	const [loadingData, setLoadingData] = useState(true);
 	const [savingAgenda, setSavingAgenda] = useState(false);
+	const [deletingAgendaId, setDeletingAgendaId] = useState<number | null>(null);
 	const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+	const [editingAgendaId, setEditingAgendaId] = useState<number | null>(null);
 
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	const [selectedDay, setSelectedDay] = useState<Date>(new Date());
@@ -86,6 +91,18 @@ export default function AdminDashboardPage() {
 		fileSurat: null,
 		lampiranFiles: [],
 	});
+
+	const resetAgendaForm = () => {
+		setAgendaForm({
+			title: "",
+			description: "",
+			start: "",
+			end: "",
+			category: "RAPAT",
+			fileSurat: null,
+			lampiranFiles: [],
+		});
+	};
 
 	const fetchDashboardData = async () => {
 		setLoadingData(true);
@@ -259,12 +276,59 @@ export default function AdminDashboardPage() {
 
 	const openAgendaModal = () => {
 		const pickedDate = formatInputDate(selectedDay);
+		setEditingAgendaId(null);
+		resetAgendaForm();
 		setAgendaForm((prev) => ({
 			...prev,
-			start: prev.start || pickedDate,
-			end: prev.end || pickedDate,
+			start: pickedDate,
+			end: pickedDate,
 		}));
 		setIsAgendaModalOpen(true);
+	};
+
+	const closeAgendaModal = () => {
+		setIsAgendaModalOpen(false);
+		setEditingAgendaId(null);
+		resetAgendaForm();
+	};
+
+	const openEditAgendaModal = (agenda: AgendaItem) => {
+		setEditingAgendaId(agenda.id);
+		setAgendaForm({
+			title: agenda.title,
+			description: agenda.description || "",
+			start: formatInputDate(new Date(agenda.start)),
+			end: formatInputDate(new Date(agenda.end)),
+			category: agenda.category,
+			fileSurat: null,
+			lampiranFiles: [],
+		});
+		setIsAgendaModalOpen(true);
+	};
+
+	const handleDeleteAgenda = async (agendaId: number) => {
+		const ok = window.confirm("Yakin ingin menghapus agenda ini?");
+		if (!ok) return;
+
+		setDeletingAgendaId(agendaId);
+		try {
+			const response = await fetch(`/api/admin/agenda?id=${agendaId}`, {
+				method: "DELETE",
+			});
+
+			const result = await response.json();
+			if (!result.success) {
+				alert(result.message || result.error || "Gagal menghapus agenda.");
+				return;
+			}
+
+			await fetchDashboardData();
+		} catch (error) {
+			console.error("Gagal menghapus agenda:", error);
+			alert("Terjadi kesalahan saat menghapus agenda.");
+		} finally {
+			setDeletingAgendaId(null);
+		}
 	};
 
 	const handleSubmitAgenda = async (event: React.FormEvent) => {
@@ -280,7 +344,9 @@ export default function AdminDashboardPage() {
 			return;
 		}
 
-		if (!agendaForm.fileSurat) {
+		const isEditing = editingAgendaId !== null;
+
+		if (!isEditing && !agendaForm.fileSurat) {
 			alert("File surat wajib diunggah.");
 			return;
 		}
@@ -297,14 +363,19 @@ export default function AdminDashboardPage() {
 			payload.append("end", agendaForm.end);
 			payload.append("category", agendaForm.category);
 			payload.append("createdBy", String(user?.id || ""));
-			payload.append("fileSurat", agendaForm.fileSurat);
 
 			agendaForm.lampiranFiles.forEach((file) => {
 				payload.append("lampiranFiles", file);
 			});
 
-			const response = await fetch("/api/admin/agenda", {
-				method: "POST",
+			if (agendaForm.fileSurat) {
+				payload.append("fileSurat", agendaForm.fileSurat);
+			}
+
+			const endpoint = isEditing ? `/api/admin/agenda?id=${editingAgendaId}` : "/api/admin/agenda";
+
+			const response = await fetch(endpoint, {
+				method: isEditing ? "PUT" : "POST",
 				body: payload,
 			});
 
@@ -315,17 +386,8 @@ export default function AdminDashboardPage() {
 				return;
 			}
 
-			alert("Agenda berhasil ditambahkan.");
-			setAgendaForm({
-				title: "",
-				description: "",
-				start: "",
-				end: "",
-				category: "RAPAT",
-				fileSurat: null,
-				lampiranFiles: [],
-			});
-			setIsAgendaModalOpen(false);
+			alert(isEditing ? "Agenda berhasil diperbarui." : "Agenda berhasil ditambahkan.");
+			closeAgendaModal();
 
 			await fetchDashboardData();
 		} catch (error) {
@@ -348,7 +410,17 @@ export default function AdminDashboardPage() {
 		return "bg-emerald-100 text-emerald-800";
 	};
 
-	const parseLampiranFiles = (lampiranValue?: AgendaItem["lampiranFiles"]) => {
+	const parseLampiranFiles = (
+		lampiranValue?: AgendaItem["lampiranFiles"],
+		lampiranList?: AgendaItem["lampiranList"]
+	) => {
+		if (lampiranList && lampiranList.length > 0) {
+			return lampiranList.map((item) => ({
+				name: item.namaFile,
+				url: item.urlFile,
+			}));
+		}
+
 		if (!lampiranValue) return [] as Array<{ name: string; url: string }>;
 
 		if (Array.isArray(lampiranValue)) return lampiranValue;
@@ -359,6 +431,40 @@ export default function AdminDashboardPage() {
 		} catch {
 			return [];
 		}
+	};
+
+	const handleAddLampiranFiles = (files: FileList | null) => {
+		if (!files || files.length === 0) return;
+
+		const incoming = Array.from(files);
+
+		setAgendaForm((prev) => {
+			const existingKeys = new Set(
+				prev.lampiranFiles.map((file) => `${file.name}-${file.size}-${file.lastModified}`)
+			);
+
+			const merged = [...prev.lampiranFiles];
+
+			incoming.forEach((file) => {
+				const key = `${file.name}-${file.size}-${file.lastModified}`;
+				if (!existingKeys.has(key)) {
+					merged.push(file);
+					existingKeys.add(key);
+				}
+			});
+
+			return {
+				...prev,
+				lampiranFiles: merged,
+			};
+		});
+	};
+
+	const handleRemoveLampiranFile = (indexToRemove: number) => {
+		setAgendaForm((prev) => ({
+			...prev,
+			lampiranFiles: prev.lampiranFiles.filter((_, index) => index !== indexToRemove),
+		}));
 	};
 
 	return (
@@ -492,7 +598,13 @@ export default function AdminDashboardPage() {
 								<p className="text-sm text-slate-500">Belum ada agenda di tanggal ini.</p>
 							) : (
 								<div className="space-y-2">
-									{agendaForSelectedDay.map((agenda) => (
+									{agendaForSelectedDay.map((agenda) => {
+										const lampiranItems = parseLampiranFiles(
+											agenda.lampiranFiles,
+											agenda.lampiranList
+										);
+
+										return (
 										<div
 											key={agenda.id}
 											className="rounded-xl border border-slate-200 bg-white p-3"
@@ -507,6 +619,24 @@ export default function AdminDashboardPage() {
 											<p className="mt-2 text-xs text-slate-500">
 												{formatDateLabel(agenda.start)} - {formatDateLabel(agenda.end)}
 											</p>
+											<div className="mt-2 flex flex-wrap items-center gap-2">
+												<button
+													type="button"
+													onClick={() => openEditAgendaModal(agenda)}
+													className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+												>
+													<Pencil size={12} /> Edit
+												</button>
+												<button
+													type="button"
+													onClick={() => handleDeleteAgenda(agenda.id)}
+													disabled={deletingAgendaId === agenda.id}
+													className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+												>
+													<Trash2 size={12} />
+													{deletingAgendaId === agenda.id ? "Menghapus..." : "Hapus"}
+												</button>
+											</div>
 											{(agenda.suratFileUrl || agenda.fileUrl) && (
 												<a
 													href={agenda.suratFileUrl || agenda.fileUrl || "#"}
@@ -517,11 +647,11 @@ export default function AdminDashboardPage() {
 													Lihat File Surat
 												</a>
 											)}
-											{parseLampiranFiles(agenda.lampiranFiles).length > 0 && (
+											{lampiranItems.length > 0 && (
 												<div className="mt-2 space-y-1">
 													<p className="text-xs font-semibold text-slate-600">Lampiran:</p>
 													<div className="flex flex-wrap gap-2">
-														{parseLampiranFiles(agenda.lampiranFiles).map((lampiran, index) => (
+														{lampiranItems.map((lampiran, index) => (
 															<a
 																key={`${agenda.id}-lampiran-${index}`}
 																href={lampiran.url}
@@ -536,7 +666,8 @@ export default function AdminDashboardPage() {
 												</div>
 											)}
 										</div>
-									))}
+									);
+									})}
 								</div>
 							)}
 						</div>
@@ -546,10 +677,12 @@ export default function AdminDashboardPage() {
 					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
 						<div className="w-full max-w-2xl rounded-3xl border border-cyan-100 bg-white shadow-2xl">
 							<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-								<h2 className="text-lg font-black text-slate-900 md:text-xl">Tambah Agenda Baru</h2>
+								<h2 className="text-lg font-black text-slate-900 md:text-xl">
+									{editingAgendaId ? "Edit Agenda" : "Tambah Agenda Baru"}
+								</h2>
 								<button
 									type="button"
-									onClick={() => setIsAgendaModalOpen(false)}
+									onClick={closeAgendaModal}
 									className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 								>
 									<X size={18} />
@@ -623,10 +756,12 @@ export default function AdminDashboardPage() {
 								</div>
 
 								<div className="space-y-1">
-									<label className="text-xs font-bold uppercase text-slate-600">File Surat (Wajib)</label>
+									<label className="text-xs font-bold uppercase text-slate-600">
+										{editingAgendaId ? "File Surat (Opsional, untuk ganti file)" : "File Surat (Wajib)"}
+									</label>
 									<label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-cyan-300 bg-cyan-50 px-3 py-2 text-sm text-cyan-900 hover:bg-cyan-100">
 										<Plus size={14} />
-										<span>{agendaForm.fileSurat?.name || "Upload File Surat"}</span>
+										<span>{agendaForm.fileSurat?.name || (editingAgendaId ? "Biarkan kosong jika tidak diganti" : "Upload File Surat")}</span>
 										<input
 											type="file"
 											onChange={(e) =>
@@ -647,26 +782,35 @@ export default function AdminDashboardPage() {
 										<span>
 											{agendaForm.lampiranFiles.length > 0
 												? `${agendaForm.lampiranFiles.length} file dipilih`
-												: "Upload Lampiran (boleh lebih dari 2 file)"}
+												: "Tambah Lampiran satu per satu"}
 										</span>
 										<input
 											type="file"
-											multiple
-											onChange={(e) =>
-												setAgendaForm((prev) => ({
-													...prev,
-													lampiranFiles: e.target.files ? Array.from(e.target.files) : [],
-												}))
-											}
+											onChange={(e) => {
+												handleAddLampiranFiles(e.target.files);
+												e.currentTarget.value = "";
+											}}
 											className="hidden"
 										/>
 									</label>
 									{agendaForm.lampiranFiles.length > 0 && (
 										<div className="space-y-1">
 											{agendaForm.lampiranFiles.map((file, index) => (
-												<p key={`${file.name}-${index}`} className="text-xs text-slate-600">
-													{index + 1}. {file.name}
-												</p>
+												<div
+													key={`${file.name}-${index}`}
+													className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1"
+												>
+													<p className="text-xs text-slate-600">
+														{index + 1}. {file.name}
+													</p>
+													<button
+														type="button"
+														onClick={() => handleRemoveLampiranFile(index)}
+														className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+													>
+														Hapus
+													</button>
+												</div>
 											))}
 										</div>
 									)}
@@ -675,7 +819,7 @@ export default function AdminDashboardPage() {
 								<div className="flex flex-col gap-2 pt-2 md:flex-row md:justify-end">
 									<button
 										type="button"
-										onClick={() => setIsAgendaModalOpen(false)}
+										onClick={closeAgendaModal}
 										className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"
 									>
 										Batal
@@ -686,7 +830,7 @@ export default function AdminDashboardPage() {
 										className="flex items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
 									>
 										{savingAgenda ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-										{savingAgenda ? "Menyimpan..." : "Simpan Agenda"}
+										{savingAgenda ? "Menyimpan..." : editingAgendaId ? "Update Agenda" : "Simpan Agenda"}
 									</button>
 								</div>
 							</form>

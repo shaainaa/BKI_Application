@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../lib/db';
 import User from './User';
+import AgendaLampiran from './AgendaLampiran';
 
 const Agenda = sequelize.define('Agenda', {
   id: {
@@ -41,6 +42,10 @@ const Agenda = sequelize.define('Agenda', {
 // Relasi
 if (!Agenda.associations.user) {
   Agenda.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+}
+
+if (!Agenda.associations.lampiranList) {
+  Agenda.hasMany(AgendaLampiran, { foreignKey: 'agendaId', as: 'lampiranList' });
 }
 
 export default Agenda;

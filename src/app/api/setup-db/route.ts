@@ -3,6 +3,8 @@ import sequelize from '@/lib/db';
 import Pds from '@/models/Pds'; 
 import User from '@/models/User'; 
 import BuktiPds from '@/models/BuktiPDS';
+import Agenda from '@/models/Agenda';
+import AgendaLampiran from '@/models/AgendaLampiran';
 
 export async function GET() {
   try {
