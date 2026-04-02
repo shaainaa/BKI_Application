@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
+import { useSearchParams } from 'next/navigation';
 
 export default function AdminPersetujuanPDS() {
+  const searchParams = useSearchParams();
   const [listPds, setListPds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +57,18 @@ export default function AdminPersetujuanPDS() {
   };
 
   useEffect(() => { fetchAllPds(); }, []);
+
+  useEffect(() => {
+    const statusParam = (searchParams.get('status') || '').toUpperCase();
+    const allowedStatus = ['PENDING', 'APPROVED', 'COMPLETED'];
+
+    if (allowedStatus.includes(statusParam)) {
+      setFilters((prev) => ({ ...prev, status: statusParam }));
+      return;
+    }
+
+    setFilters((prev) => ({ ...prev, status: '' }));
+  }, [searchParams]);
 
   const handleOpenModal = (pds: any) => {
     setSelectedPds(pds);
@@ -339,12 +353,12 @@ export default function AdminPersetujuanPDS() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. SO</label>
-                      <input type="text" value={adminInput.so} onChange={(e) => setAdminInput({...adminInput, so: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SO-..." />
+                      <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. Agenda</label>
+                      <input type="text" value={adminInput.so} onChange={(e) => setAdminInput({...adminInput, sps: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SO-..." />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. SPS</label>
-                      <input type="text" value={adminInput.sps} onChange={(e) => setAdminInput({...adminInput, sps: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SPS-..." />
+                      <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. SO</label>
+                      <input type="text" value={adminInput.sps} onChange={(e) => setAdminInput({...adminInput, so: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SPS-..." />
                     </div>
                   </div>
                   <div>

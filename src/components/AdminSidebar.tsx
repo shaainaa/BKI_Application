@@ -24,10 +24,9 @@ export default function AdminSidebar() {
   const isReportsActive = pathname?.includes('/admin/reports');
   const isSettingsActive = pathname?.includes('/admin/settings');
 
-  // contoh submenu PDS untuk admin
-  const isAdminPdsActive = pathname?.includes('/admin/pds');
+  const isAdminPdsActive = pathname?.includes('/admin/persetujuan') || pathname?.includes('/admin/riwayatPDS');
   const isAdminPdsList = pathname?.includes('/admin/persetujuan');
-  const isAdminPdsCreate = pathname?.includes('/admin/pds/create');
+  const isAdminPdsRiwayat = pathname?.includes('/admin/riwayatPDS');
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-20">
@@ -98,24 +97,27 @@ export default function AdminSidebar() {
                 }`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${isAdminPdsList ? 'bg-[#0A8E9A]' : 'bg-gray-400'}`}></div>
+                  className={`w-2 h-2 rounded-full ${
+                    isAdminPdsList ? 'bg-[#0A8E9A]' : 'bg-gray-400'
+                  }`}
+                ></div>
                 Daftar PDS
               </Link>
 
               <Link
-                href="/admin/pds/create"
+                href="/admin/riwayatPDS"
                 className={`flex items-center gap-3 px-2 py-2 text-sm transition-colors ${
-                  isAdminPdsCreate
+                  isAdminPdsRiwayat
                     ? 'font-bold text-[#0A8E9A]'
                     : 'font-medium text-gray-500 hover:text-gray-800'
                 }`}
               >
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    isAdminPdsCreate ? 'bg-[#0A8E9A]' : 'bg-gray-400'
+                    isAdminPdsRiwayat ? 'bg-[#0A8E9A]' : 'bg-gray-400'
                   }`}
                 ></div>
-                Buat PDS
+                Riwayat PDS
               </Link>
             </div>
           )}
