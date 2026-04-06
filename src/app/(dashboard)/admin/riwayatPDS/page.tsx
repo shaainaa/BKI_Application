@@ -15,7 +15,8 @@ export default function AdminRiwayatPDSPage() {
 		nama: '',
 		lokasi: '',
 		permohonan: '',
-		tanggal: '',
+		tanggalMulai: '',
+		tanggalAkhir: '',
 		keperluan: '',
 		statusPembayaran: '',
 		tanggalPembayaran: '',
@@ -77,7 +78,8 @@ export default function AdminRiwayatPDSPage() {
 			const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
 			const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
 			const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
-			const matchTanggal = !filters.tanggal || itemDate === filters.tanggal;
+			const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
+			const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
 			const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
 			const matchStatusPembayaran = !filters.statusPembayaran || paymentStatus === filters.statusPembayaran;
 			const matchTanggalPembayaran = !filters.tanggalPembayaran || itemPaymentDate === filters.tanggalPembayaran;
@@ -86,7 +88,8 @@ export default function AdminRiwayatPDSPage() {
 				matchNama &&
 				matchLokasi &&
 				matchPermohonan &&
-				matchTanggal &&
+				matchTanggalMulai &&
+				matchTanggalAkhir &&
 				matchKeperluan &&
 				matchStatusPembayaran &&
 				matchTanggalPembayaran
@@ -155,9 +158,18 @@ export default function AdminRiwayatPDSPage() {
 			return;
 		}
 
+		if (filters.tanggalMulai && filters.tanggalAkhir && filters.tanggalMulai > filters.tanggalAkhir) {
+			alert('Tanggal pengajuan mulai tidak boleh lebih besar dari tanggal pengajuan akhir.');
+			return;
+		}
+
+		const exportData = [...filteredPds].sort(
+			(a: any, b: any) => new Date(a.tanggalPengajuan).getTime() - new Date(b.tanggalPengajuan).getTime()
+		);
+
 		const XLSX = await import('xlsx');
 
-		const excelRows = filteredPds.map((item: any) => {
+		const excelRows = exportData.map((item: any) => {
 			const jenis = (item.permohonan || '').toUpperCase();
 			const { month, year } = getMonthAndYear(item.tanggalPengajuan);
 			const nomorPdsTrans = item.nomorPdsTrans || '-';
@@ -205,7 +217,7 @@ export default function AdminRiwayatPDSPage() {
 						</button>
 					</div>
 					<div className="space-y-4">
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 							<div>
 								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Nama Surveyor</label>
 								<select
@@ -246,11 +258,20 @@ export default function AdminRiwayatPDSPage() {
 								</select>
 							</div>
 							<div>
-								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Tanggal Pengajuan</label>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Tanggal Pengajuan Mulai</label>
 								<input
 									type="date"
-									value={filters.tanggal}
-									onChange={(e) => setFilters((prev) => ({ ...prev, tanggal: e.target.value }))}
+									value={filters.tanggalMulai}
+									onChange={(e) => setFilters((prev) => ({ ...prev, tanggalMulai: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
+								/>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Tanggal Pengajuan Akhir</label>
+								<input
+									type="date"
+									value={filters.tanggalAkhir}
+									onChange={(e) => setFilters((prev) => ({ ...prev, tanggalAkhir: e.target.value }))}
 									className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
 								/>
 							</div>
