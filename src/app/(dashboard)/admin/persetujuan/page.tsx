@@ -266,7 +266,7 @@ export default function AdminPersetujuanPDS() {
                     <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                     <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
                     <td className="py-4 px-6 text-center">
-                      <span className={`px-6 py-1 rounded-full text-[10px] font-black tracking-widest ${
+                      <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${
                         data.status === 'PENDING' ? 'bg-red-50 text-red-600' : 
                         data.status === 'APPROVED' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-teal-700'
                       }`}>
@@ -354,16 +354,16 @@ export default function AdminPersetujuanPDS() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. Agenda</label>
-                      <input type="text" value={adminInput.so} onChange={(e) => setAdminInput({...adminInput, sps: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SO-..." />
+                      <input type="text" value={adminInput.sps} onChange={(e) => setAdminInput({...adminInput, sps: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 font-black text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SPS-..." />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">No. SO</label>
-                      <input type="text" value={adminInput.sps} onChange={(e) => setAdminInput({...adminInput, so: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SPS-..." />
+                      <input type="text" value={adminInput.so} onChange={(e) => setAdminInput({...adminInput, so: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 font-black text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="SO-..." />
                     </div>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-teal-600 mb-1 ml-1 uppercase">Nomor PDS/Trans</label>
-                    <input type="text" value={adminInput.nomorPdsTrans} onChange={(e) => setAdminInput({...adminInput, nomorPdsTrans: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="PDS/TRANS/..." />
+                    <input type="text" value={adminInput.nomorPdsTrans} onChange={(e) => setAdminInput({...adminInput, nomorPdsTrans: e.target.value})} className="w-full bg-white border border-teal-200 rounded-2xl px-5 py-3 font-black text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="PDS/TRANS/..." />
                   </div>
                 </div>
 

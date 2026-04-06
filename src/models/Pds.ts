@@ -52,6 +52,15 @@ const Pds = sequelize.define('Pds', {
   nomorPdsTrans: { 
     type: DataTypes.STRING, 
     allowNull: true 
+  },
+  statusPembayaran: {
+    type: DataTypes.ENUM('BELUM_DIBAYAR', 'SUDAH_DIBAYAR'),
+    allowNull: false,
+    defaultValue: 'BELUM_DIBAYAR'
+  },
+  tanggalPembayaran: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'pds',

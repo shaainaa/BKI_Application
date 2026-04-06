@@ -45,18 +45,36 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, status, nominal, sps, so, nomorPdsTrans } = body;
+    const {
+      id,
+      status,
+      nominal,
+      sps,
+      so,
+      nomorPdsTrans,
+      statusPembayaran,
+      tanggalPembayaran,
+    } = body;
 
-    const updatedPds = await Pds.update(
-      { 
-        status,
-        nominalPDS: nominal, 
-        sps, 
-        so, 
-        nomorPdsTrans 
-      },
-      { where: { id } }
-    );
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'ID PDS wajib diisi' }, { status: 400 });
+    }
+
+    const updatePayload: Record<string, any> = {};
+
+    if (typeof status !== 'undefined') updatePayload.status = status;
+    if (typeof nominal !== 'undefined') updatePayload.nominalPDS = nominal;
+    if (typeof sps !== 'undefined') updatePayload.sps = sps;
+    if (typeof so !== 'undefined') updatePayload.so = so;
+    if (typeof nomorPdsTrans !== 'undefined') updatePayload.nomorPdsTrans = nomorPdsTrans;
+    if (typeof statusPembayaran !== 'undefined') updatePayload.statusPembayaran = statusPembayaran;
+    if (typeof tanggalPembayaran !== 'undefined') updatePayload.tanggalPembayaran = tanggalPembayaran;
+
+    if (Object.keys(updatePayload).length === 0) {
+      return NextResponse.json({ success: false, error: 'Tidak ada data yang diubah' }, { status: 400 });
+    }
+
+    await Pds.update(updatePayload, { where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

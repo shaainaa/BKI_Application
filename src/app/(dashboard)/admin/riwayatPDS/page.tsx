@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, XCircle } from 'lucide-react';
+import { Check, Download, FileText, XCircle } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 
@@ -9,6 +9,7 @@ export default function AdminRiwayatPDSPage() {
 	const [listPds, setListPds] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [previewData, setPreviewData] = useState<any>(null);
+	const [processingPaymentId, setProcessingPaymentId] = useState<number | null>(null);
 
 	const [filters, setFilters] = useState({
 		nama: '',
@@ -16,6 +17,8 @@ export default function AdminRiwayatPDSPage() {
 		permohonan: '',
 		tanggal: '',
 		keperluan: '',
+		statusPembayaran: '',
+		tanggalPembayaran: '',
 	});
 
 	const fetchCompletedPds = async () => {
@@ -68,16 +71,123 @@ export default function AdminRiwayatPDSPage() {
 			const permohonan = (item.permohonan || '').toLowerCase();
 			const keperluan = (item.keperluan || '').toLowerCase();
 			const itemDate = formatDateInput(item.tanggalPengajuan);
+			const itemPaymentDate = formatDateInput(item.tanggalPembayaran);
+			const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
 
 			const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
 			const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
 			const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
 			const matchTanggal = !filters.tanggal || itemDate === filters.tanggal;
 			const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+			const matchStatusPembayaran = !filters.statusPembayaran || paymentStatus === filters.statusPembayaran;
+			const matchTanggalPembayaran = !filters.tanggalPembayaran || itemPaymentDate === filters.tanggalPembayaran;
 
-			return matchNama && matchLokasi && matchPermohonan && matchTanggal && matchKeperluan;
+			return (
+				matchNama &&
+				matchLokasi &&
+				matchPermohonan &&
+				matchTanggal &&
+				matchKeperluan &&
+				matchStatusPembayaran &&
+				matchTanggalPembayaran
+			);
 		});
 	}, [listPds, filters]);
+
+	const handleMarkAsPaid = async (id: number) => {
+		if (!confirm('Konfirmasi transfer pembayaran untuk data ini?')) return;
+
+		setProcessingPaymentId(id);
+		try {
+			const nowIso = new Date().toISOString();
+			const res = await fetch('/api/admin/pds', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					id,
+					statusPembayaran: 'SUDAH_DIBAYAR',
+					tanggalPembayaran: nowIso,
+				}),
+			});
+
+			const result = await res.json();
+			if (!result.success) {
+				alert(result.error || 'Gagal memperbarui status pembayaran.');
+				return;
+			}
+
+			setListPds((prev) =>
+				prev.map((item) =>
+					item.id === id
+						? { ...item, statusPembayaran: 'SUDAH_DIBAYAR', tanggalPembayaran: nowIso }
+						: item
+				)
+			);
+			alert('Status pembayaran berhasil diubah menjadi Sudah Dibayar.');
+		} catch (err) {
+			alert('Terjadi kesalahan jaringan saat update pembayaran.');
+		} finally {
+			setProcessingPaymentId(null);
+		}
+	};
+
+	const getMonthAndYear = (dateString: string) => {
+		if (!dateString) return { month: '-', year: '-' };
+		const date = new Date(dateString);
+		if (Number.isNaN(date.getTime())) return { month: '-', year: '-' };
+
+		return {
+			month: date.toLocaleDateString('id-ID', { month: 'long' }),
+			year: String(date.getFullYear()),
+		};
+	};
+
+	const getDayOnly = (dateString: string) => {
+		if (!dateString) return '-';
+		const date = new Date(dateString);
+		if (Number.isNaN(date.getTime())) return '-';
+		return String(date.getDate()).padStart(2, '0');
+	};
+
+	const handleExportExcel = async () => {
+		if (filteredPds.length === 0) {
+			alert('Tidak ada data untuk diexport.');
+			return;
+		}
+
+		const XLSX = await import('xlsx');
+
+		const excelRows = filteredPds.map((item: any) => {
+			const jenis = (item.permohonan || '').toUpperCase();
+			const { month, year } = getMonthAndYear(item.tanggalPengajuan);
+			const nomorPdsTrans = item.nomorPdsTrans || '-';
+
+			return {
+				'No. Transportasi': jenis === 'TRANSPORTASI' ? nomorPdsTrans : '-',
+				'No. PDS': jenis !== 'TRANSPORTASI' ? nomorPdsTrans : '-',
+				Bulan: month,
+				Tahun: year,
+				Tanggal: getDayOnly(item.tanggalPengajuan),
+				Lokasi: item.lokasi || '-',
+				Jenis: jenis || '-',
+				Nama: item.user?.nama || item.user?.name || '-',
+				Keperluan: item.keperluan || '-',
+				Nominal: item.nominalPDS || '-',
+				SPS: item.sps || item.noAgenda || '-',
+				SO: item.so || '-',
+				'Visit Ke': item.visitKe || '-',
+				'Status Pembayaran': item.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah Dibayar' : 'Belum Dibayar',
+				'Tanggal Pembayaran': formatDate(item.tanggalPembayaran),
+			};
+		});
+
+		const worksheet = XLSX.utils.json_to_sheet(excelRows);
+		const workbook = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat PDS');
+
+		const today = new Date().toISOString().slice(0, 10);
+		XLSX.writeFile(workbook, `riwayat-pds-${today}.xlsx`);
+	};
 
 	return (
 		<div className="p-8 bg-[#f8f9fa] min-h-screen font-sans">
@@ -85,56 +195,103 @@ export default function AdminRiwayatPDSPage() {
 
 			<div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
 				<div className="mb-6">
-					<p className="font-semibold text-gray-700 mb-3 text-sm">Filter</p>
-					<div className="flex gap-4 flex-wrap">
-						<select
-							value={filters.nama}
-							onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
-							className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+					<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+						<p className="font-semibold text-gray-700 text-sm">Filter</p>
+						<button
+							onClick={handleExportExcel}
+							className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
 						>
-							<option value="">Semua Nama</option>
-							{filterOptions.nama.map((item) => (
-								<option key={item} value={item}>{item}</option>
-							))}
-						</select>
-						<select
-							value={filters.lokasi}
-							onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
-							className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
-						>
-							<option value="">Semua Lokasi</option>
-							{filterOptions.lokasi.map((item) => (
-								<option key={item} value={item}>{item}</option>
-							))}
-						</select>
-						<select
-							value={filters.permohonan}
-							onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
-							className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
-						>
-							<option value="">Semua Jenis</option>
-							{filterOptions.permohonan.map((item) => (
-								<option key={item} value={item}>{item}</option>
-							))}
-						</select>
-						<div className="relative flex-1 min-w-[150px]">
-							<input
-								type="date"
-								value={filters.tanggal}
-								onChange={(e) => setFilters((prev) => ({ ...prev, tanggal: e.target.value }))}
-								className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
-							/>
+							<Download size={14} /> Export Excel
+						</button>
+					</div>
+					<div className="space-y-4">
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Nama Surveyor</label>
+								<select
+									value={filters.nama}
+									onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+								>
+									<option value="">Semua Nama</option>
+									{filterOptions.nama.map((item) => (
+										<option key={item} value={item}>{item}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Lokasi</label>
+								<select
+									value={filters.lokasi}
+									onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+								>
+									<option value="">Semua Lokasi</option>
+									{filterOptions.lokasi.map((item) => (
+										<option key={item} value={item}>{item}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Jenis</label>
+								<select
+									value={filters.permohonan}
+									onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+								>
+									<option value="">Semua Jenis</option>
+									{filterOptions.permohonan.map((item) => (
+										<option key={item} value={item}>{item}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Tanggal Pengajuan</label>
+								<input
+									type="date"
+									value={filters.tanggal}
+									onChange={(e) => setFilters((prev) => ({ ...prev, tanggal: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
+								/>
+							</div>
 						</div>
-						<select
-							value={filters.keperluan}
-							onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
-							className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
-						>
-							<option value="">Semua Keperluan</option>
-							{filterOptions.keperluan.map((item) => (
-								<option key={item} value={item}>{item}</option>
-							))}
-						</select>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Keperluan</label>
+								<select
+									value={filters.keperluan}
+									onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+								>
+									<option value="">Semua Keperluan</option>
+									{filterOptions.keperluan.map((item) => (
+										<option key={item} value={item}>{item}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Status Pembayaran</label>
+								<select
+									value={filters.statusPembayaran}
+									onChange={(e) => setFilters((prev) => ({ ...prev, statusPembayaran: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none"
+								>
+									<option value="">Semua Status Pembayaran</option>
+									<option value="BELUM_DIBAYAR">Belum Dibayar</option>
+									<option value="SUDAH_DIBAYAR">Sudah Dibayar</option>
+								</select>
+							</div>
+							<div>
+								<label className="block text-[11px] font-semibold text-gray-500 mb-1.5">Tanggal Pembayaran</label>
+								<input
+									type="date"
+									value={filters.tanggalPembayaran}
+									onChange={(e) => setFilters((prev) => ({ ...prev, tanggalPembayaran: e.target.value }))}
+									className="w-full border border-gray-300 rounded-full px-5 py-2.5 text-gray-600 outline-none focus:border-teal-500"
+								/>
+							</div>
+						</div>
 					</div>
 				</div>
 
@@ -148,14 +305,16 @@ export default function AdminRiwayatPDSPage() {
 								<th className="py-4 px-6 text-center">Jenis</th>
 								<th className="py-4 px-6">Keperluan</th>
 								<th className="py-4 px-6 text-center">Status</th>
+								<th className="py-4 px-6 text-center">Status Pembayaran</th>
+								<th className="py-4 px-6 text-center">Tanggal Pembayaran</th>
 								<th className="py-4 px-6 rounded-tr-2xl text-center">Action</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-100">
 							{loading ? (
-								<tr><td colSpan={7} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
+								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
 							) : filteredPds.length === 0 ? (
-								<tr><td colSpan={7} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
+								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
 							) : (
 								filteredPds.map((data: any) => (
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
@@ -169,6 +328,20 @@ export default function AdminRiwayatPDSPage() {
 												COMPLETE
 											</span>
 										</td>
+										<td className="py-4 px-6 text-center">
+											<span
+												className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest whitespace-nowrap inline-flex items-center justify-center ${
+													data.statusPembayaran === 'SUDAH_DIBAYAR'
+														? 'bg-green-50 text-green-700'
+														: 'bg-red-50 text-red-600'
+												}`}
+											>
+												{data.statusPembayaran === 'SUDAH_DIBAYAR' ? 'SUDAH DIBAYAR' : 'BELUM DIBAYAR'}
+											</span>
+										</td>
+										<td className="py-4 px-6 text-center whitespace-nowrap">
+											{formatDate(data.tanggalPembayaran)}
+										</td>
 										<td className="py-4 px-6">
 											<div className="flex justify-center gap-2">
 												<button
@@ -177,6 +350,18 @@ export default function AdminRiwayatPDSPage() {
 													title="Lihat Surat"
 												>
 													<FileText size={18} />
+												</button>
+												<button
+													onClick={() => handleMarkAsPaid(data.id)}
+													disabled={data.statusPembayaran === 'SUDAH_DIBAYAR' || processingPaymentId === data.id}
+													className={`p-2 rounded-xl transition-all shadow-sm ${
+														data.statusPembayaran === 'SUDAH_DIBAYAR'
+															? 'bg-green-100 text-green-700 cursor-not-allowed'
+															: 'bg-emerald-500 text-white hover:bg-emerald-600'
+													}`}
+													title={data.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah ditransfer' : 'Konfirmasi Transfer'}
+												>
+													<Check size={18} />
 												</button>
 											</div>
 										</td>
