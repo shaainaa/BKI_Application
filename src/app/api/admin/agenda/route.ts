@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import path from 'path';
 import Agenda from '@/models/Agenda';
 import AgendaLampiran from '@/models/AgendaLampiran';
+import {
+  deleteUploadThingByUrl,
+  deleteUploadThingManyByUrls,
+  uploadManyToUploadThing,
+  uploadOneToUploadThing,
+} from '@/lib/uploadthing';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-const toPublicPath = (fileUrl?: string | null) => {
-  if (!fileUrl) return null;
-  if (!fileUrl.startsWith('/')) return null;
-  return path.join(process.cwd(), 'public', fileUrl.replace(/^\/+/, '').replace(/\//g, path.sep));
-};
-
-const safeUnlink = async (fileUrl?: string | null) => {
-  try {
-    const filePath = toPublicPath(fileUrl);
-    if (filePath) await unlink(filePath);
-  } catch {
-    // Ignore file delete failures to avoid blocking DB updates.
-  }
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,27 +30,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Ukuran file surat terlalu besar. Maksimal 5MB.' }, { status: 400 });
     }
 
-    const uploadDir = path.join(process.cwd(), 'public/uploads/agendas');
-    await mkdir(uploadDir, { recursive: true });
+    const suratFileUrl = await uploadOneToUploadThing(fileSurat);
 
-    const suratBuffer = Buffer.from(await fileSurat.arrayBuffer());
-    const suratFilename = `${Date.now()}_surat_${fileSurat.name.replace(/\s+/g, '_')}`;
-    await writeFile(path.join(uploadDir, suratFilename), suratBuffer);
-    const suratFileUrl = `/uploads/agendas/${suratFilename}`;
-
-    const lampiranPayload: Array<{ name: string; url: string }> = [];
     for (const lampiran of lampiranFiles) {
       if (lampiran.size > MAX_FILE_SIZE) {
         return NextResponse.json({ success: false, message: `Ukuran file lampiran ${lampiran.name} terlalu besar. Maksimal 5MB.` }, { status: 400 });
       }
+    }
 
-      const lampiranBuffer = Buffer.from(await lampiran.arrayBuffer());
-      const lampiranFilename = `${Date.now()}_lampiran_${lampiran.name.replace(/\s+/g, '_')}`;
-      await writeFile(path.join(uploadDir, lampiranFilename), lampiranBuffer);
+    const lampiranPayload: Array<{ name: string; url: string }> = [];
+    const uploadedLampiranUrls = await uploadManyToUploadThing(lampiranFiles);
 
+    for (let index = 0; index < lampiranFiles.length; index += 1) {
+      const lampiran = lampiranFiles[index];
       lampiranPayload.push({
         name: lampiran.name,
-        url: `/uploads/agendas/${lampiranFilename}`,
+        url: uploadedLampiranUrls[index],
       });
     }
 
@@ -75,10 +59,12 @@ export async function POST(req: NextRequest) {
       createdBy: Number.isFinite(createdBy) ? createdBy : null,
     });
 
+    const agendaId = Number(agenda.getDataValue('id'));
+
     if (lampiranPayload.length > 0) {
       await AgendaLampiran.bulkCreate(
         lampiranPayload.map((lampiran) => ({
-          agendaId: (agenda as any).id,
+          agendaId,
           namaFile: lampiran.name,
           urlFile: lampiran.url,
         }))
@@ -86,8 +72,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: agenda });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -118,25 +105,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Data agenda belum lengkap.' }, { status: 400 });
     }
 
-    const uploadDir = path.join(process.cwd(), 'public/uploads/agendas');
-    await mkdir(uploadDir, { recursive: true });
-
-    let suratFileUrl = (agenda as any).suratFileUrl as string | null;
-    let suratNamaFile = (agenda as any).suratNamaFile as string | null;
-    let fileUrl = (agenda as any).fileUrl as string | null;
+    let suratFileUrl = (agenda.getDataValue('suratFileUrl') as string | null) || null;
+    let suratNamaFile = (agenda.getDataValue('suratNamaFile') as string | null) || null;
+    let fileUrl = (agenda.getDataValue('fileUrl') as string | null) || null;
 
     if (fileSurat) {
       if (fileSurat.size > MAX_FILE_SIZE) {
         return NextResponse.json({ success: false, message: 'Ukuran file surat terlalu besar. Maksimal 5MB.' }, { status: 400 });
       }
 
-      const suratBuffer = Buffer.from(await fileSurat.arrayBuffer());
-      const suratFilename = `${Date.now()}_surat_${fileSurat.name.replace(/\s+/g, '_')}`;
-      await writeFile(path.join(uploadDir, suratFilename), suratBuffer);
+      await deleteUploadThingByUrl(suratFileUrl || fileUrl);
 
-      await safeUnlink(suratFileUrl || fileUrl);
-
-      suratFileUrl = `/uploads/agendas/${suratFilename}`;
+      suratFileUrl = await uploadOneToUploadThing(fileSurat);
       suratNamaFile = fileSurat.name;
       fileUrl = suratFileUrl;
     }
@@ -159,15 +139,17 @@ export async function PUT(req: NextRequest) {
         if (lampiran.size > MAX_FILE_SIZE) {
           return NextResponse.json({ success: false, message: `Ukuran file lampiran ${lampiran.name} terlalu besar. Maksimal 5MB.` }, { status: 400 });
         }
+      }
 
-        const lampiranBuffer = Buffer.from(await lampiran.arrayBuffer());
-        const lampiranFilename = `${Date.now()}_lampiran_${lampiran.name.replace(/\s+/g, '_')}`;
-        await writeFile(path.join(uploadDir, lampiranFilename), lampiranBuffer);
+      const uploadedLampiranUrls = await uploadManyToUploadThing(lampiranFiles);
+
+      for (let index = 0; index < lampiranFiles.length; index += 1) {
+        const lampiran = lampiranFiles[index];
 
         lampiranPayload.push({
           agendaId: id,
           namaFile: lampiran.name,
-          urlFile: `/uploads/agendas/${lampiranFilename}`,
+          urlFile: uploadedLampiranUrls[index],
         });
       }
 
@@ -186,8 +168,9 @@ export async function PUT(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: updatedAgenda });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -210,15 +193,21 @@ export async function DELETE(req: NextRequest) {
       attributes: ['id', 'urlFile'],
     });
 
-    await Promise.all(lampiranRows.map((lampiran: any) => safeUnlink(lampiran.urlFile)));
+    await deleteUploadThingManyByUrls(
+      lampiranRows.map((lampiran) => (lampiran.getDataValue('urlFile') as string | null) || null)
+    );
     await AgendaLampiran.destroy({ where: { agendaId: id } });
 
-    await safeUnlink((agenda as any).suratFileUrl || (agenda as any).fileUrl);
+    await deleteUploadThingByUrl(
+      (agenda.getDataValue('suratFileUrl') as string | null) ||
+      (agenda.getDataValue('fileUrl') as string | null)
+    );
     await agenda.destroy();
 
     return NextResponse.json({ success: true, message: 'Agenda berhasil dihapus.' });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -237,7 +226,8 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

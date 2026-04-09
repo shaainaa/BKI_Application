@@ -1,7 +1,6 @@
     import { NextRequest, NextResponse } from 'next/server';
     import  Pds  from '@/models/Pds';
-    import { writeFile, mkdir} from 'fs/promises';
-    import path from 'path';
+    import { uploadOneToUploadThing } from '@/lib/uploadthing';
 
     export async function POST(req: NextRequest) {
         try {
@@ -11,17 +10,7 @@
             let ttdUrl = '';
 
             if (fileData && fileData.size > 0) {
-                const bytes = await fileData.arrayBuffer();
-                const buffer = Buffer.from(bytes);
-
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-                await mkdir(uploadDir, { recursive: true });
-
-                const fileName = `${Date.now()}_${fileData.name.replace(/\s+/g, '_')}`;
-                const filePath = path.join(uploadDir, fileName);
-                
-                await writeFile(filePath, buffer);
-                ttdUrl = `/uploads/${fileName}`;
+                ttdUrl = await uploadOneToUploadThing(fileData);
             }
             const newPds = await Pds.create({
                 userId: data.get('userId'),
@@ -41,8 +30,11 @@
 
             return NextResponse.json({ success: true, pds: newPds });
             
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error processing PDS submission:', error);
-            return NextResponse.json({ success: false, message: error.message || 'An error occurred while processing the PDS submission.' }, { status: 500 });
+            const message = error instanceof Error
+                ? error.message
+                : 'An error occurred while processing the PDS submission.';
+            return NextResponse.json({ success: false, message }, { status: 500 });
         }
     }

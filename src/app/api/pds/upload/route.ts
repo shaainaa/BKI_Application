@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 // PENTING: Pastikan lokasi import model BuktiPds ini sudah benar sesuai foldermu!
 import BuktiPds from '@/models/BuktiPDS'; 
+import { deleteUploadThingByUrl, uploadOneToUploadThing } from '@/lib/uploadthing';
 
 export async function POST(request: Request) {
   console.log("=== 1. API UPLOAD MULAI DIPANGGIL ===");
@@ -24,25 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Data tidak lengkap" }, { status: 400 });
     }
 
-    // Mengubah file menjadi buffer untuk disimpan
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const uploadDir = path.join(process.cwd(), 'public/uploads');
-
-    // Membuat folder jika belum ada
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Abaikan jika folder sudah ada
-    }
-
-    // Menyimpan file ke dalam folder public/uploads
-    const filePath = path.join(uploadDir, filename);
-    await writeFile(filePath, buffer);
-    console.log("=== 3. FILE FISIK BERHASIL DISIMPAN DI FOLDER ===", filePath);
-
-    // Menyimpan path ke Database
-    const fileUrl = `/uploads/${filename}`;
+    const fileUrl = await uploadOneToUploadThing(file);
     console.log("=== 4. MENCOBA INSERT KE DATABASE ===");
 
     const existingBukti = await BuktiPds.findOne({ 
@@ -55,6 +36,7 @@ export async function POST(request: Request) {
     let savedBukti;
 
     if (existingBukti) {
+      await deleteUploadThingByUrl(existingBukti.get('fileUrl') as string);
       savedBukti = await existingBukti.update({
         fileUrl: fileUrl,
         namaFile: file.name
@@ -68,8 +50,9 @@ export async function POST(request: Request) {
       });
     }
     return NextResponse.json({ success: true, message: "File berhasil diupload dan disimpan di database!", data: savedBukti });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ === ERROR TERJADI DI SERVER === ❌", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
