@@ -1,25 +1,33 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, User, LogOut } from 'lucide-react';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<{ nama: string; role: string } | null>(null);
-  const router = useRouter();
+  const [user] = useState<{ nama: string; role: string } | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
 
-  useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+  const router = useRouter();
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     router.push('/login');
   };
 
+  const handleGoToProfile = () => {
+    setIsOpen(false);
+    router.push('/profile');
+  };
+
   return (
-    <header className="h-20 w-full flex items-center justify-end px-10 relative bg-transparent">
+    <header className="fixed left-64 right-0 top-0 z-40 h-20 border-b border-gray-100 bg-white px-10 shadow-sm">
+      <div className="relative flex h-full items-center justify-end">
       <div 
         className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-xl transition-all"
         onClick={() => setIsOpen(!isOpen)}
@@ -48,8 +56,11 @@ export default function Header() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-20 right-10 w-48 bg-white rounded-2xl shadow-xl border border-gray-50 py-2 z-50 animate-in fade-in zoom-in duration-150">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+        <div className="absolute top-16 right-0 w-48 bg-white rounded-2xl shadow-xl border border-gray-50 py-2 z-50 animate-in fade-in zoom-in duration-150">
+          <button
+            onClick={handleGoToProfile}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
             <User size={16} /> Profil Saya
           </button>
           <div className="border-t border-gray-50 my-1"></div>
@@ -61,6 +72,7 @@ export default function Header() {
           </button>
         </div>
       )}
+      </div>
     </header>
   );
 }

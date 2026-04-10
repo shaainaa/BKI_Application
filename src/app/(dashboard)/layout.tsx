@@ -30,14 +30,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!authorized) return null;
 
   return (
-    <div className="flex bg-[#F8F9FA] min-h-screen overflow-hidden">
+    <div className="flex bg-[#F8F9FA] min-h-screen overflow-x-hidden">
       {/* KONDISI SIDEBAR BERDASARKAN ROLE */}
       {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
 
       <div className="flex-1 ml-64 flex flex-col min-w-0">
         <Header />
         
-        <main className="p-10 pt-2 flex-1 w-full overflow-x-hidden">
+        <main className="p-10 pt-24 flex-1 w-full overflow-x-hidden">
           {children}
         </main>
       </div>

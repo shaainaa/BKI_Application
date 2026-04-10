@@ -8,6 +8,7 @@ type SurveyorUser = {
 	nama: string;
 	email: string;
 	username: string;
+	jabatanSurveyor?: string | null;
 	noTelp?: string | null;
 	jenisBank?: string | null;
 	noRekening?: string | null;
@@ -19,6 +20,7 @@ type FormState = {
 	email: string;
 	username: string;
 	password: string;
+	jabatanSurveyor: string;
 	noTelp: string;
 	jenisBank: string;
 	noRekening: string;
@@ -29,6 +31,7 @@ const initialForm: FormState = {
 	email: "",
 	username: "",
 	password: "",
+	jabatanSurveyor: "",
 	noTelp: "",
 	jenisBank: "",
 	noRekening: "",
@@ -102,6 +105,7 @@ export default function AdminPenggunaPage() {
 					email: form.email.trim(),
 					username: form.username.trim(),
 					password: form.password,
+					jabatanSurveyor: form.jabatanSurveyor.trim(),
 					noTelp: form.noTelp.trim(),
 					jenisBank: form.jenisBank.trim(),
 					noRekening: form.noRekening.trim(),
@@ -144,59 +148,90 @@ export default function AdminPenggunaPage() {
 					</div>
 
 					<form onSubmit={handleSubmit} className="space-y-4">
-						<input
-							type="text"
-							placeholder="Nama lengkap"
-							value={form.nama}
-							onChange={(e) => onChangeInput("nama", e.target.value)}
-							className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-						/>
-						<input
-							type="email"
-							placeholder="Email"
-							value={form.email}
-							onChange={(e) => onChangeInput("email", e.target.value)}
-							className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-						/>
-						<input
-							type="text"
-							placeholder="Username"
-							value={form.username}
-							onChange={(e) => onChangeInput("username", e.target.value)}
-							className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-						/>
-						<input
-							type="password"
-							placeholder="Password"
-							value={form.password}
-							onChange={(e) => onChangeInput("password", e.target.value)}
-							className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-						/>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Nama Lengkap</span>
+							<input
+								type="text"
+								placeholder="Nama lengkap"
+								value={form.nama}
+								onChange={(e) => onChangeInput("nama", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Email</span>
+							<input
+								type="email"
+								placeholder="Email"
+								value={form.email}
+								onChange={(e) => onChangeInput("email", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Username</span>
+							<input
+								type="text"
+								placeholder="Username"
+								value={form.username}
+								onChange={(e) => onChangeInput("username", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Jabatan Surveyor</span>
+							<input
+								type="text"
+								placeholder="Jabatan Surveyor (contoh: Surveyor Ahli)"
+								value={form.jabatanSurveyor}
+								onChange={(e) => onChangeInput("jabatanSurveyor", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Password</span>
+							<input
+								type="password"
+								placeholder="Password"
+								value={form.password}
+								onChange={(e) => onChangeInput("password", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
 
 						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-							<input
-								type="text"
-								placeholder="No. Telepon"
-								value={form.noTelp}
-								onChange={(e) => onChangeInput("noTelp", e.target.value)}
-								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-							/>
-							<input
-								type="text"
-								placeholder="Jenis Bank"
-								value={form.jenisBank}
-								onChange={(e) => onChangeInput("jenisBank", e.target.value)}
-								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-							/>
+							<label className="block space-y-1">
+								<span className="text-xs font-semibold text-gray-600">Nomor Telepon</span>
+								<input
+									type="text"
+									placeholder="No. Telepon"
+									value={form.noTelp}
+									onChange={(e) => onChangeInput("noTelp", e.target.value)}
+									className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+								/>
+							</label>
+							<label className="block space-y-1">
+								<span className="text-xs font-semibold text-gray-600">Jenis Bank</span>
+								<input
+									type="text"
+									placeholder="Jenis Bank"
+									value={form.jenisBank}
+									onChange={(e) => onChangeInput("jenisBank", e.target.value)}
+									className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+								/>
+							</label>
 						</div>
 
-						<input
-							type="text"
-							placeholder="No. Rekening"
-							value={form.noRekening}
-							onChange={(e) => onChangeInput("noRekening", e.target.value)}
-							className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
-						/>
+						<label className="block space-y-1">
+							<span className="text-xs font-semibold text-gray-600">Nomor Rekening</span>
+							<input
+								type="text"
+								placeholder="No. Rekening"
+								value={form.noRekening}
+								onChange={(e) => onChangeInput("noRekening", e.target.value)}
+								className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+							/>
+						</label>
 
 						{message ? (
 							<div className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{message}</div>
@@ -236,6 +271,7 @@ export default function AdminPenggunaPage() {
 									<th className="rounded-l-xl px-4 py-3">Nama</th>
 									<th className="px-4 py-3">Email</th>
 									<th className="px-4 py-3">Username</th>
+									<th className="px-4 py-3">Jabatan</th>
 									<th className="px-4 py-3">No. Telp</th>
 									<th className="rounded-r-xl px-4 py-3">Bank / Rekening</th>
 								</tr>
@@ -243,7 +279,7 @@ export default function AdminPenggunaPage() {
 							<tbody>
 								{loading ? (
 									<tr>
-										<td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+										<td colSpan={6} className="px-4 py-10 text-center text-gray-400">
 											<span className="inline-flex items-center gap-2">
 												<Loader2 className="animate-spin" size={16} />
 												Memuat data pengguna...
@@ -252,7 +288,7 @@ export default function AdminPenggunaPage() {
 									</tr>
 								) : users.length === 0 ? (
 									<tr>
-										<td colSpan={5} className="px-4 py-10 text-center text-gray-400">Belum ada akun surveyor.</td>
+										<td colSpan={6} className="px-4 py-10 text-center text-gray-400">Belum ada akun surveyor.</td>
 									</tr>
 								) : (
 									users.map((user) => (
@@ -260,6 +296,7 @@ export default function AdminPenggunaPage() {
 											<td className="px-4 py-3 font-semibold text-gray-900">{user.nama}</td>
 											<td className="px-4 py-3">{user.email}</td>
 											<td className="px-4 py-3">{user.username}</td>
+											<td className="px-4 py-3">{user.jabatanSurveyor || "-"}</td>
 											<td className="px-4 py-3">{user.noTelp || "-"}</td>
 											<td className="px-4 py-3">{user.jenisBank || user.noRekening ? `${user.jenisBank || "-"} / ${user.noRekening || "-"}` : "-"}</td>
 										</tr>

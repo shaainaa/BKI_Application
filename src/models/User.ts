@@ -12,6 +12,7 @@ const User = sequelize.define('User', {
   nama: { type: DataTypes.STRING, allowNull: false },
   username: { type: DataTypes.STRING, allowNull: false, unique: true },
   password: { type: DataTypes.STRING, allowNull: false },
+  jabatanSurveyor: { type: DataTypes.STRING },
   noTelp: { type: DataTypes.STRING },
   noRekening: { type: DataTypes.STRING },
   jenisBank: { type: DataTypes.STRING },

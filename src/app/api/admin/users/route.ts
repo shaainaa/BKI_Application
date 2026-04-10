@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/User';
+import { hashPassword } from '@/lib/password';
 
 export async function GET() {
   try {
     const users = await User.findAll({
       where: { role: 'SURVEYOR' },
-      attributes: ['id', 'nama', 'email', 'username', 'noTelp', 'jenisBank', 'noRekening', 'role'],
+      attributes: ['id', 'nama', 'email', 'username', 'jabatanSurveyor', 'noTelp', 'jenisBank', 'noRekening', 'role'],
       order: [['id', 'DESC']],
     });
 
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
       email,
       username,
       password,
+      jabatanSurveyor,
       noTelp,
       jenisBank,
       noRekening,
@@ -62,11 +64,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const passwordHash = await hashPassword(String(password));
+
     const newUser = await User.create({
       nama,
       email,
       username,
-      password,
+      password: passwordHash,
+      jabatanSurveyor: jabatanSurveyor || null,
       noTelp: noTelp || null,
       jenisBank: jenisBank || null,
       noRekening: noRekening || null,
