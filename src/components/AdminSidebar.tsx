@@ -20,7 +20,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/';
-  const isUsersActive = pathname?.includes('/admin/users');
+  const isUsersActive = pathname?.includes('/admin/pengguna');
   const isReportsActive = pathname?.includes('/admin/reports');
   const isSettingsActive = pathname?.includes('/admin/settings');
 
@@ -58,7 +58,7 @@ export default function AdminSidebar() {
 
         {/* manajemen pengguna */}
         <Link
-          href="/admin/users"
+          href="/admin/pengguna"
           className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
             isUsersActive
               ? 'text-white bg-[#0A8E9A] shadow-sm'
