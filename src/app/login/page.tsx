@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -10,6 +11,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const mapLoginErrorMessage = (status: number, message?: string) => {
+    if (status === 401) return 'Username atau password salah.';
+    if (status === 503) return 'Layanan login sedang gangguan. Silakan coba lagi beberapa saat.';
+    if (status >= 500) return 'Terjadi gangguan server. Silakan coba lagi nanti.';
+    if (message && message.trim()) return message;
+    return 'Login gagal. Silakan cek kembali data Anda.';
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,21 +32,29 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const isJsonResponse = contentType.includes('application/json');
+      const data = isJsonResponse ? await res.json() : null;
 
-      if (data.success) {
+      if (res.ok && data?.success) {
         // Simpan data user ke localStorage untuk sesi sederhana
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.user.role === 'ADMIN') {
-          window.location.href = '/admin/dashboard';
+          router.push('/admin/dashboard');
         } else {
-          window.location.href = '/pds/permohonan';
+          router.push('/pds/permohonan');
         } 
       } else {
-        setError(data.message || 'Username atau password salah');
+        if (isJsonResponse) {
+          setError(mapLoginErrorMessage(res.status, data?.message || data?.error));
+        } else {
+          setError(mapLoginErrorMessage(res.status));
+        }
       }
-    } catch (err) {
-      setError("Gagal terhubung ke server. Pastikan database menyala.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      const isNetworkError = /failed to fetch|network|load failed/i.test(message);
+      setError(isNetworkError ? 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.' : 'Gagal memproses permintaan login.');
     } finally {
       setIsLoading(false);
     }
@@ -50,10 +67,13 @@ export default function LoginPage() {
         
         {/* Kolom Kiri: Gambar Background (Hidden di Mobile) */}
         <div className="hidden md:block md:w-1/2 relative">
-          <img 
-            src="/images/Foto Login.png" 
-            alt="Surveyor BKI" 
+          <Image
+            src="/images/Foto Login.png"
+            alt="Surveyor BKI"
+            fill
+            sizes="(min-width: 768px) 50vw, 0vw"
             className="absolute inset-0 w-full h-full object-cover"
+            priority
           />
           {/* Overlay gradasi agar gambar lebih menyatu dengan desain */}
           <div className="absolute inset-0 bg-blue-900/10"></div>
@@ -64,7 +84,7 @@ export default function LoginPage() {
           <div>
             {/* Logo Section */}
             <div className="flex justify-center items-center md:justify-center mb-10">
-              <img src="/images/BKI.png" alt="Logo BKI" className="h-20 w-auto object-contain" />
+              <Image src="/images/BKI.png" alt="Logo BKI" width={200} height={80} className="h-20 w-auto object-contain" priority />
             </div>
 
             {/* Header Text */}
@@ -147,7 +167,7 @@ export default function LoginPage() {
 
           {/* Footer Logo (BUMN, Danantara, IDSurvey) */}
           <div className="flex justify-center items-center pt-10 opacity-60 hover:opacity-100 transition-opacity">
-            <img src="/images/Logo Bawah.png" alt="BUMN" className="h-10 w-auto" />
+            <Image src="/images/Logo Bawah.png" alt="BUMN" width={220} height={40} className="h-10 w-auto" />
           </div>
         </div>
 

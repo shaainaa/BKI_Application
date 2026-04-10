@@ -20,6 +20,35 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Setup (Local + Vercel)
+
+1. Copy `.env.example` to `.env` and isi nilainya.
+2. Pilih salah satu format koneksi database:
+	- `DATABASE_URL`
+	- atau `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+3. Jika akses local dev dari perangkat lain (IP LAN), isi `ALLOWED_DEV_ORIGINS`.
+
+Contoh:
+
+```env
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_USER="root"
+DB_PASSWORD="password"
+DB_NAME="bki_app"
+ALLOWED_DEV_ORIGINS="http://192.168.1.10:3000"
+```
+
+Untuk deploy ke Vercel:
+- Buka Project Settings -> Environment Variables.
+- Masukkan variabel yang sama seperti di `.env` lokal.
+- Jangan commit file `.env` yang berisi secret.
+
+## Login Error Behavior
+
+- Pesan error di halaman login dibuat lebih sederhana untuk user awam.
+- Detail teknis hanya ditampilkan pada mode development agar debugging tetap mudah.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -59,7 +59,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         {/* Profile Image */}
         <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm border border-white">
           <img 
-            src="/next.svg" 
+            src="/images/BKI.png" 
             alt="Profile" 
             className="w-full h-full object-cover"
           />
