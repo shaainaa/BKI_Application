@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const userRaw = localStorage.getItem('user');
@@ -27,17 +28,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [pathname, router]);
 
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [pathname]);
+
   if (!authorized) return null;
 
   return (
-    <div className="flex bg-[#F8F9FA] min-h-screen overflow-x-hidden">
+    <div className="flex min-h-screen bg-[#F8F9FA] overflow-x-hidden">
       {/* KONDISI SIDEBAR BERDASARKAN ROLE */}
-      {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
+      <div className="hidden lg:block">
+        {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
+      </div>
 
-      <div className="flex-1 ml-64 flex flex-col min-w-0">
-        <Header />
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" aria-hidden>
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col lg:ml-64">
+        <Header onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} />
         
-        <main className="p-10 pt-24 flex-1 w-full overflow-x-hidden">
+        <main className="w-full flex-1 overflow-x-hidden px-4 pt-2 pb-6 sm:px-6 lg:px-10 lg:pb-10">
           {children}
         </main>
       </div>

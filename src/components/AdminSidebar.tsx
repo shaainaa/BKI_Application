@@ -29,7 +29,7 @@ export default function AdminSidebar() {
   const isAdminPdsRiwayat = pathname?.includes('/admin/riwayatPDS');
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-20">
+    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50">
       {/* logo */}
       <div className="p-4 flex items-center gap-2">
         <Image
