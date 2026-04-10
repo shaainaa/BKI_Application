@@ -30,27 +30,24 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   };
 
   return (
-<<<<<<< HEAD
-    <header className="fixed left-64 right-0 top-0 z-40 h-20 border-b border-gray-100 bg-white px-10 shadow-sm">
-      <div className="relative flex h-full items-center justify-end">
-=======
-    <header className="relative flex h-20 w-full items-center justify-end bg-transparent px-4 sm:px-6 lg:px-10">
+    <header className="sticky top-0 z-30 h-20 w-full border-b border-gray-100 bg-white px-4 shadow-sm sm:px-6 lg:px-10">
+      <div className="relative flex h-full w-full items-center">
       <button
         type="button"
         onClick={onToggleSidebar}
-        className="absolute left-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 sm:left-6 lg:hidden"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 lg:hidden"
         aria-label="Buka menu sidebar"
       >
         <Menu size={18} />
       </button>
 
->>>>>>> 92a1781 (responsive)
-      <div 
-        className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 rounded-xl transition-all"
+      <button
+        type="button"
+        className="ml-auto inline-flex shrink-0 items-center gap-3 rounded-xl p-2 transition-all hover:bg-gray-50"
         onClick={() => setIsOpen(!isOpen)}
       >
         {/* Info Text */}
-        <div className="text-right hidden sm:block">
+        <div className="hidden text-right sm:block">
           <p className="text-sm font-bold text-gray-800 leading-tight">
             {user?.nama || 'Muhammad'}
           </p>
@@ -69,20 +66,15 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         </div>
 
         <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
+      </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-<<<<<<< HEAD
-        <div className="absolute top-16 right-0 w-48 bg-white rounded-2xl shadow-xl border border-gray-50 py-2 z-50 animate-in fade-in zoom-in duration-150">
+        <div className="absolute top-20 right-4 z-50 w-48 animate-in zoom-in rounded-2xl border border-gray-50 bg-white py-2 shadow-xl fade-in duration-150 sm:right-6 lg:right-10">
           <button
             onClick={handleGoToProfile}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
-=======
-        <div className="absolute top-20 right-4 z-50 w-48 animate-in zoom-in rounded-2xl border border-gray-50 bg-white py-2 shadow-xl fade-in duration-150 sm:right-6 lg:right-10">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
->>>>>>> 92a1781 (responsive)
             <User size={16} /> Profil Saya
           </button>
           <div className="border-t border-gray-50 my-1"></div>
