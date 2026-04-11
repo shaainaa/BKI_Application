@@ -44,10 +44,11 @@ function toBooleanEnv(value: string | undefined, defaultValue: boolean): boolean
 const databaseUrl = cleanEnv(process.env.DATABASE_URL);
 const parsedDbUrl = parseMysqlUrl(databaseUrl);
 
-const host = cleanEnv(process.env.DB_HOST) || parsedDbUrl?.host || '';
-const dbName = cleanEnv(process.env.DB_NAME) || parsedDbUrl?.dbName || '';
-const dbUser = cleanEnv(process.env.DB_USER) || parsedDbUrl?.user || '';
-const dbPassword = cleanEnv(process.env.DB_PASSWORD) || parsedDbUrl?.password || '';
+// Prefer DATABASE_URL when available to avoid conflicts with stale DB_* vars on cloud runtimes.
+const host = parsedDbUrl?.host || cleanEnv(process.env.DB_HOST) || '';
+const dbName = parsedDbUrl?.dbName || cleanEnv(process.env.DB_NAME) || '';
+const dbUser = parsedDbUrl?.user || cleanEnv(process.env.DB_USER) || '';
+const dbPassword = parsedDbUrl?.password || cleanEnv(process.env.DB_PASSWORD) || '';
 
 const isTiDBHost = /tidbcloud\.com$/i.test(host);
 const sslMode = (process.env.DB_SSL_MODE ?? 'auto').toLowerCase(); // auto | on | off
@@ -58,7 +59,9 @@ const useSSL =
       ? false
       : toBooleanEnv(process.env.DB_SSL, isTiDBHost);
 const rejectUnauthorized = toBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, true);
-const port = Number(cleanEnv(process.env.DB_PORT) || parsedDbUrl?.port || (isTiDBHost ? '4000' : '3306'));
+const port = Number(parsedDbUrl?.port || cleanEnv(process.env.DB_PORT) || (isTiDBHost ? '4000' : '3306'));
+const isLocalHost = /^(localhost|127\.0\.0\.1|::1)$/i.test(host);
+const isProd = process.env.NODE_ENV === 'production';
 
 export const missingDbEnvs = [
   !host ? 'DB_HOST' : null,
@@ -66,6 +69,11 @@ export const missingDbEnvs = [
   !dbUser ? 'DB_USER' : null,
   !dbPassword ? 'DB_PASSWORD' : null,
 ].filter(Boolean) as string[];
+
+export const invalidDbConfigReason =
+  isProd && isLocalHost
+    ? 'DB_HOST/DATABASE_URL masih menunjuk localhost pada environment production.'
+    : null;
 
 const sslConfig = useSSL
   ? {
