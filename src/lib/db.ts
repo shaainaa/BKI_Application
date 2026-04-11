@@ -62,6 +62,8 @@ const rejectUnauthorized = toBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, 
 const port = Number(parsedDbUrl?.port || cleanEnv(process.env.DB_PORT) || (isTiDBHost ? '4000' : '3306'));
 const isLocalHost = /^(localhost|127\.0\.0\.1|::1)$/i.test(host);
 const isProd = process.env.NODE_ENV === 'production';
+const envSource = parsedDbUrl ? 'DATABASE_URL' : 'DB_*';
+const resolvedHost = host || (isProd ? 'invalid-host' : '127.0.0.1');
 
 export const missingDbEnvs = [
   !host ? 'DB_HOST' : null,
@@ -75,6 +77,12 @@ export const invalidDbConfigReason =
     ? 'DB_HOST/DATABASE_URL masih menunjuk localhost pada environment production.'
     : null;
 
+if (isProd) {
+  console.info(
+    `[db] source=${envSource} host=${resolvedHost} port=${port} useSSL=${useSSL} localHost=${isLocalHost}`
+  );
+}
+
 const sslConfig = useSSL
   ? {
       minVersion: 'TLSv1.2',
@@ -87,7 +95,7 @@ const sequelize = new Sequelize(
   dbUser || 'root',
   dbPassword,
   {
-    host: host || '127.0.0.1',
+    host: resolvedHost,
     port,
     dialect: 'mysql',
     dialectModule: mysql2,
