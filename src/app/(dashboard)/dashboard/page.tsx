@@ -331,7 +331,7 @@ export default function DashboardSurveyorPage() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} dy={10} />
                   <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} />
                   <Tooltip
-                    formatter={(value: number) => `${value} pengajuan`}
+                    formatter={(value) => `${Number(value ?? 0)} pengajuan`}
                     labelStyle={{ color: "#374151", fontWeight: "bold" }}
                   />
                   <Area type="monotone" dataKey="total" stroke="#16A34A" strokeWidth={2} fillOpacity={1} fill="url(#colorTotalPds)" />
