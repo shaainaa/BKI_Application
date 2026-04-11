@@ -1,7 +1,7 @@
 import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { hashPassword, isBcryptHash, verifyPassword } from '@/lib/password';
-import { invalidDbConfigReason, missingDbEnvs } from '@/lib/db';
+import { missingDbEnvs } from '@/lib/db';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -18,14 +18,6 @@ function loginErrorResponse(status: number, message: string, detail?: string) {
 
 export async function POST(req: Request) {
   try {
-    if (invalidDbConfigReason) {
-      return loginErrorResponse(
-        503,
-        'Layanan login belum siap. Silakan hubungi admin aplikasi.',
-        invalidDbConfigReason
-      );
-    }
-
     if (missingDbEnvs.length > 0) {
       return loginErrorResponse(
         503,
