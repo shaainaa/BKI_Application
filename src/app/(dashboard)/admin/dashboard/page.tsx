@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
+	ArrowRight,
+	BadgeCheck,
 	Calendar,
 	ClipboardList,
 	Clock3,
@@ -54,6 +57,15 @@ type AgendaForm = {
 	lampiranFiles: File[];
 };
 
+type UserItem = {
+	id: number;
+	nama?: string;
+	email?: string;
+	jabatanSurveyor?: string | null;
+};
+
+const AGENDA_PER_PAGE = 5;
+
 const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const MONTH_NAMES = [
 	"Januari",
@@ -73,6 +85,7 @@ const MONTH_NAMES = [
 export default function AdminDashboardPage() {
 	const [pdsList, setPdsList] = useState<PdsItem[]>([]);
 	const [agendaList, setAgendaList] = useState<AgendaItem[]>([]);
+	const [surveyorList, setSurveyorList] = useState<UserItem[]>([]);
 	const [loadingData, setLoadingData] = useState(true);
 	const [savingAgenda, setSavingAgenda] = useState(false);
 	const [deletingAgendaId, setDeletingAgendaId] = useState<number | null>(null);
@@ -83,6 +96,7 @@ export default function AdminDashboardPage() {
 
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+	const [agendaPage, setAgendaPage] = useState(1);
 
 	const [agendaForm, setAgendaForm] = useState<AgendaForm>({
 		title: "",
@@ -109,12 +123,17 @@ export default function AdminDashboardPage() {
 	const fetchDashboardData = async () => {
 		setLoadingData(true);
 		try {
-			const [pdsRes, agendaRes] = await Promise.all([
+			const [pdsRes, agendaRes, usersRes] = await Promise.all([
 				fetch("/api/admin/pds"),
 				fetch("/api/admin/agenda"),
+				fetch("/api/admin/users"),
 			]);
 
-			const [pdsJson, agendaJson] = await Promise.all([pdsRes.json(), agendaRes.json()]);
+			const [pdsJson, agendaJson, usersJson] = await Promise.all([
+				pdsRes.json(),
+				agendaRes.json(),
+				usersRes.json(),
+			]);
 
 			if (pdsJson.success) {
 				setPdsList(pdsJson.data || []);
@@ -122,6 +141,10 @@ export default function AdminDashboardPage() {
 
 			if (agendaJson.success) {
 				setAgendaList(agendaJson.data || []);
+			}
+
+			if (usersJson.success) {
+				setSurveyorList(usersJson.data || []);
 			}
 		} catch (error) {
 			console.error("Gagal memuat data dashboard:", error);
@@ -135,6 +158,10 @@ export default function AdminDashboardPage() {
 	}, []);
 
 	const stats = useMemo(() => {
+		const today = toStartOfDay(new Date());
+		const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 0, 0, 0, 0);
+		const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
 		const totalPds = pdsList.length;
 		const waitingApproval = pdsList.filter((item) => item.status === "PENDING").length;
 		const activeSurveyor = new Set(
@@ -143,13 +170,28 @@ export default function AdminDashboardPage() {
 				.map((item) => item.user!.id)
 		).size;
 
+		const agendaThisMonth = agendaList.filter((agenda) => {
+			const start = new Date(agenda.start);
+			const end = new Date(agenda.end);
+			return end >= monthStart && start <= monthEnd;
+		}).length;
+
+		const agendaToday = agendaList.filter((agenda) => {
+			const start = toStartOfDay(agenda.start);
+			const end = toEndOfDay(agenda.end);
+			return today >= start && today <= end;
+		}).length;
+
 		return {
 			totalPds,
 			waitingApproval,
 			activeSurveyor,
 			totalAgenda: agendaList.length,
+			totalSurveyor: surveyorList.length,
+			agendaThisMonth,
+			agendaToday,
 		};
-	}, [agendaList.length, pdsList]);
+	}, [agendaList, pdsList, selectedDate, surveyorList.length]);
 
 	const activities = useMemo(() => {
 		return [...pdsList]
@@ -211,15 +253,15 @@ export default function AdminDashboardPage() {
 		});
 	};
 
-	const toStartOfDay = (value: Date | string) => {
+	function toStartOfDay(value: Date | string) {
 		const date = new Date(value);
 		return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-	};
+	}
 
-	const toEndOfDay = (value: Date | string) => {
+	function toEndOfDay(value: Date | string) {
 		const date = new Date(value);
 		return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-	};
+	}
 
 	const isSameDay = (a: Date, b: Date) => {
 		return (
@@ -253,6 +295,43 @@ export default function AdminDashboardPage() {
 			})
 			.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 	}, [agendaList, selectedDate]);
+
+	const agendaCategorySummary = useMemo(() => {
+		const result: Record<string, number> = {};
+
+		agendaForSelectedMonth.forEach((agenda) => {
+			result[agenda.category] = (result[agenda.category] || 0) + 1;
+		});
+
+		return Object.entries(result)
+			.map(([category, total]) => ({ category, total }))
+			.sort((a, b) => b.total - a.total)
+			.slice(0, 4);
+	}, [agendaForSelectedMonth]);
+
+	const pendingApprovals = useMemo(() => {
+		return pdsList
+			.filter((item) => item.status === "PENDING")
+			.sort((a, b) => new Date(b.tanggalPengajuan).getTime() - new Date(a.tanggalPengajuan).getTime())
+			.slice(0, 5);
+	}, [pdsList]);
+
+	const totalAgendaPages = Math.max(1, Math.ceil(agendaForSelectedMonth.length / AGENDA_PER_PAGE));
+
+	const pagedAgendaForMonth = useMemo(() => {
+		const startIndex = (agendaPage - 1) * AGENDA_PER_PAGE;
+		return agendaForSelectedMonth.slice(startIndex, startIndex + AGENDA_PER_PAGE);
+	}, [agendaForSelectedMonth, agendaPage]);
+
+	useEffect(() => {
+		setAgendaPage(1);
+	}, [selectedDate]);
+
+	useEffect(() => {
+		if (agendaPage > totalAgendaPages) {
+			setAgendaPage(totalAgendaPages);
+		}
+	}, [agendaPage, totalAgendaPages]);
 
 	const agendaDayMap = useMemo(() => {
 		const map = new Set<string>();
@@ -510,11 +589,19 @@ export default function AdminDashboardPage() {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-sky-50 via-teal-50 to-emerald-50 p-6 md:p-8">
 			<div className="mx-auto max-w-7xl space-y-6">
-				<h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-					Dashboard Admin PDS
-				</h1>
+				<div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+					<div>
+						<h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Dashboard Admin PDS</h1>
+						<p className="mt-1 text-sm text-slate-600 md:text-base">
+							Pantau approval, distribusi agenda, dan performa surveyor dalam satu panel operasional.
+						</p>
+					</div>
+					<div className="inline-flex w-fit items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 md:text-sm">
+						<Calendar size={16} /> Agenda per bulan ditampilkan 5 item per halaman
+					</div>
+				</div>
 
-				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
 					<article className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
 						<div className="mb-3 flex items-center justify-between">
 							<p className="text-sm font-semibold text-cyan-900">Total PDS Saat Ini</p>
@@ -545,6 +632,74 @@ export default function AdminDashboardPage() {
 							<Calendar className="text-emerald-700" size={20} />
 						</div>
 						<p className="text-3xl font-black text-emerald-900">{stats.totalAgenda}</p>
+					</article>
+
+					<article className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-violet-900">Total Surveyor</p>
+							<UserRound className="text-violet-700" size={20} />
+						</div>
+						<p className="text-3xl font-black text-violet-900">{stats.totalSurveyor}</p>
+					</article>
+
+					<article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-sm font-semibold text-slate-800">Agenda Bulan Ini</p>
+							<BadgeCheck className="text-slate-700" size={20} />
+						</div>
+						<p className="text-3xl font-black text-slate-900">{stats.agendaThisMonth}</p>
+					</article>
+				</section>
+
+				<section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+					<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+						<div className="mb-3 flex items-center justify-between">
+							<h2 className="text-lg font-black text-slate-900">Approval Menunggu Tindakan</h2>
+							<Link href="/admin/persetujuan" className="inline-flex items-center gap-1 text-xs font-bold text-cyan-700 hover:underline">
+								Buka Persetujuan <ArrowRight size={12} />
+							</Link>
+						</div>
+
+						{pendingApprovals.length === 0 ? (
+							<p className="text-sm text-slate-500">Tidak ada antrean approval saat ini.</p>
+						) : (
+							<div className="space-y-2">
+								{pendingApprovals.map((item) => (
+									<div key={item.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+										<div className="flex flex-wrap items-center justify-between gap-2">
+											<p className="text-sm font-bold text-slate-800">{item.user?.nama || "Surveyor"} - {item.permohonan}</p>
+											<span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">PENDING</span>
+										</div>
+										<p className="mt-1 text-xs text-slate-600">{item.lokasi} - {formatDateLabel(item.tanggalPengajuan)}</p>
+									</div>
+								))}
+							</div>
+						)}
+					</article>
+
+					<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+						<h2 className="mb-3 text-lg font-black text-slate-900">Ringkasan Agenda</h2>
+						<div className="space-y-2">
+							<div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
+								<p className="text-xs font-semibold text-cyan-700">Agenda Hari Ini</p>
+								<p className="mt-1 text-2xl font-black text-cyan-900">{stats.agendaToday}</p>
+							</div>
+							<div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+								<p className="mb-2 text-xs font-semibold text-slate-700">Kategori Tertinggi Bulan Ini</p>
+								{agendaCategorySummary.length === 0 ? (
+									<p className="text-xs text-slate-500">Belum ada agenda untuk bulan ini.</p>
+								) : (
+									<div className="space-y-1">
+										{agendaCategorySummary.map((item) => (
+											<div key={item.category} className="flex items-center justify-between text-xs text-slate-700">
+												<span>{item.category}</span>
+												<span className="font-bold">{item.total}</span>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
 					</article>
 				</section>
 
@@ -638,7 +793,7 @@ export default function AdminDashboardPage() {
 								<p className="text-sm text-slate-500">Belum ada agenda di bulan ini.</p>
 							) : (
 								<div className="space-y-2">
-									{agendaForSelectedMonth.map((agenda) => {
+										{pagedAgendaForMonth.map((agenda) => {
 										const lampiranItems = parseLampiranFiles(
 											agenda.lampiranFiles,
 											agenda.lampiranList
@@ -708,9 +863,53 @@ export default function AdminDashboardPage() {
 										</div>
 									);
 									})}
+
+										<div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-100 p-2">
+											<p className="text-xs font-semibold text-slate-600">
+												Halaman {agendaPage} dari {totalAgendaPages}
+											</p>
+											<div className="flex items-center gap-2">
+												<button
+													type="button"
+													onClick={() => setAgendaPage((prev) => Math.max(1, prev - 1))}
+													disabled={agendaPage === 1}
+													className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+												>
+													Prev
+												</button>
+												<button
+													type="button"
+													onClick={() => setAgendaPage((prev) => Math.min(totalAgendaPages, prev + 1))}
+													disabled={agendaPage === totalAgendaPages}
+													className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+												>
+													Next
+												</button>
+											</div>
+										</div>
 								</div>
 							)}
 						</div>
+				</section>
+
+				<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+					<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+						<h2 className="text-xl font-black text-slate-900">Agenda Tanggal Terpilih</h2>
+						<p className="text-sm font-semibold text-slate-600">{formatDateFromDate(selectedDay)}</p>
+					</div>
+
+					{agendaForSelectedDay.length === 0 ? (
+						<p className="text-sm text-slate-500">Belum ada agenda pada tanggal ini.</p>
+					) : (
+						<div className="space-y-2">
+							{agendaForSelectedDay.map((agenda) => (
+								<div key={`selected-${agenda.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+									<p className="font-bold text-slate-800">{agenda.title}</p>
+									<p className="mt-1 text-xs text-slate-600">{agenda.category} - {formatDateLabel(agenda.start)} s/d {formatDateLabel(agenda.end)}</p>
+								</div>
+							))}
+						</div>
+					)}
 				</section>
 
 				{isAgendaModalOpen && (

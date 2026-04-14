@@ -42,7 +42,7 @@ export default function LoginPage() {
         if (data.user.role === 'ADMIN') {
           router.push('/admin/dashboard');
         } else {
-          router.push('/pds/permohonan');
+          router.push('/dashboard');
         } 
       } else {
         if (isJsonResponse) {
