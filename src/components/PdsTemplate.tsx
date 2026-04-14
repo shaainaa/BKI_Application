@@ -54,7 +54,7 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <View style={styles.signBox}>
           <Text>Mengetahui</Text>
           <Text>SM Operasi</Text>
-          <View style={{ height: 60 }} />
+          <Image src="/images/AGUNG%20WICAKSONO.jpeg" style={styles.signatureImg} />
           <Text style={{ borderBottomWidth: 1 }}>Ir. Agung Wicaksono</Text>
         </View>
 
