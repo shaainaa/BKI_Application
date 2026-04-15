@@ -184,7 +184,8 @@ export default function PermohonanPDS() {
               <th className="py-4 px-6 font-bold text-center">Keperluan</th>
               <th className="py-4 px-6 font-bold text-center">Status</th>
               <th className="py-4 px-6 font-bold text-center">Surat</th>
-              <th className="py-4 px-6 font-bold text-center">Bukti Survey</th>
+              <th className="py-4 px-6 font-bold text-center">Visit</th>
+              <th className="py-4 px-6 font-bold text-center">Foto</th>
               <th className="py-4 px-6 font-bold text-center">Bukti Transportasi</th>
               <th className="py-4 px-6 font-bold text-center">Bukti Penginapan</th>
               <th className="py-4 px-6 font-bold text-center">Bukti Lainnya</th>
@@ -193,10 +194,10 @@ export default function PermohonanPDS() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={12} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+              <tr><td colSpan={13} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={12} className="py-20 text-center bg-gray-50">
+                <td colSpan={13} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
@@ -231,6 +232,13 @@ export default function PermohonanPDS() {
                     kategori="SURVEY" 
                     existingBukti={row.bukti?.find((b: any) => b.kategori === 'SURVEY')}
                     onUploadSuccess={fetchInitialData}/>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <TombolUpload status={row.status} 
+                    pdsId={row.id} 
+                    kategori="FOTO" 
+                    existingBukti={row.bukti?.find((b: any) => b.kategori === 'FOTO')}
+                    onUploadSuccess={fetchInitialData} />
                   </td>
                   <td className="py-4 px-6 text-center">
                     <TombolUpload status={row.status} 

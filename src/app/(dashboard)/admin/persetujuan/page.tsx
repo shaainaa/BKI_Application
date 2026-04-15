@@ -320,7 +320,7 @@ export default function AdminPersetujuanPDS() {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-3">
-                  {['SURVEY', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'].map((kat) => {
+                  {['SURVEY', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'].map((kat) => {
                     const existingBukti = selectedPds.bukti?.find((b: any) => b.kategori === kat);
                     return (
                       <div key={kat} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">

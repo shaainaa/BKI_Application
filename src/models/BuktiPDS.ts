@@ -18,7 +18,7 @@ const BuktiPds = sequelize.define('BuktiPds', {
     }
   },
   kategori: {
-    type: DataTypes.ENUM('SURVEY', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'),
+    type: DataTypes.ENUM('SURVEY', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'),
     allowNull: false,
   },
   fileUrl: {
