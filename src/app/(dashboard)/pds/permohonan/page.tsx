@@ -178,6 +178,7 @@ export default function PermohonanPDS() {
             {/* Tambahkan whitespace-nowrap agar judul kolom tidak turun ke bawah */}
             <tr className="bg-[#B9C6D3] text-gray-800 text-[13px] tracking-widest whitespace-nowrap">
               <th className="py-4 px-6 font-bold text-center">Tanggal</th>
+              <th className="py-4 px-6 font-bold text-center">No. Agenda</th>
               <th className="py-4 px-6 font-bold text-center">Lokasi</th>
               <th className="py-4 px-6 font-bold text-center">Permohonan</th>
               <th className="py-4 px-6 font-bold text-center">Keperluan</th>
@@ -192,10 +193,10 @@ export default function PermohonanPDS() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={11} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
+              <tr><td colSpan={12} className="py-20 text-center text-gray-400">Loading data BKI...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-20 text-center bg-gray-50">
+                <td colSpan={12} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
@@ -204,6 +205,7 @@ export default function PermohonanPDS() {
               filteredData.map((row) => (
                 <tr key={row.id} className="hover:bg-teal-50/30 transition-colors whitespace-nowrap">
                   <td className="py-4 px-6 text-sm text-gray-600">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
+                  <td className="py-4 px-6 text-sm text-center font-semibold text-gray-700">{row.noAgenda || '-'}</td>
                   <td className="py-4 px-6 text-sm font-bold text-gray-800">{row.lokasi}</td>
                   <td className="py-4 px-6 text-center">
                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-black italic uppercase">{row.permohonan}</span>

@@ -246,17 +246,18 @@ export default function AdminPersetujuanPDS() {
                 <th className="py-4 px-6">Lokasi</th>
                 <th className="py-4 px-6 text-center">Tanggal</th>
                 <th className="py-4 px-6 text-center">Jenis</th>
-                <th className="py-4 px-6">Keperluan</th>
+                <th className="py-4 px-6">Keperluan</th> 
+                <th className="py-4 px-6 text-center">No. Agenda</th>
                 <th className="py-4 px-6 text-center">Status</th>
                 <th className="py-4 px-6 rounded-tr-2xl text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
+                <tr><td colSpan={8} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
               ) : (
                 filteredPds.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
+                  <tr><td colSpan={8} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
                 ) : (
                 filteredPds.map((data: any) => (
                   <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
@@ -265,6 +266,7 @@ export default function AdminPersetujuanPDS() {
                     <td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
                     <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                     <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
+                    <td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || data.sps || '-'}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${
                         data.status === 'PENDING' ? 'bg-red-50 text-red-600' : 
