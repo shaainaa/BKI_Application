@@ -99,7 +99,6 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
       if (result.success) {
         alert("Permohonan berhasil disimpan!");
         onClose();
-        window.location.reload();
       } else {
         alert("Gagal:" + (result.message ||result.error));
       }
@@ -155,8 +154,8 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
               >
                 <option value="">Pilih satu</option>
                 <option value="PDS">PDS</option>
-                <option value="Lembur">LEMBUR</option>
-                <option value="Transportasi">TRANSPORTASI</option>
+                <option value="LEMBUR">LEMBUR</option>
+                <option value="TRANSPORTASI">TRANSPORTASI</option>
               </select>
             </div>
 
@@ -211,7 +210,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
             </div>
 
             {/* Jam Berangkat (Hanya muncul jika Permohonan == 'Lembur') */}
-            {formData.permohonan === 'Lembur' && (
+            {formData.permohonan === 'LEMBUR' && (
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-bold text-gray-800">Jam Berangkat</label>
                 <input 
@@ -233,7 +232,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
             </div>
 
             {/* Jam Kembali (Hanya muncul jika Permohonan == 'Lembur') */}
-            {formData.permohonan === 'Lembur' && (
+            {formData.permohonan === 'LEMBUR' && (
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-bold text-gray-800">Jam Kembali</label>
                 <input 
@@ -263,8 +262,8 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
                 required
               >
                 <option value="">Pilih satu</option>
-                <option value="Final">Final</option>
-                <option value="Progress">Progress</option>
+                <option value="FINAL">Final</option>
+                <option value="PROGRESS">Progress</option>
               </select>
             </div>
 

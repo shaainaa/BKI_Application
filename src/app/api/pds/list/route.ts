@@ -15,13 +15,19 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
+    const status = (searchParams.get('status') || '').toUpperCase();
     
     if (!userId) {
         return NextResponse.json({ success: false, message: 'Unauthorized'}, { status: 401});
     }
 
+    const whereClause: Record<string, any> = { userId };
+    if (status) {
+      whereClause.status = status;
+    }
+
     const listPds = await Pds.findAll({
-        where: { userId: userId },
+        where: whereClause,
         include: [
             {
                 model: User,

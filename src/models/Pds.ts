@@ -13,7 +13,7 @@ const Pds = sequelize.define('Pds', {
     allowNull: false
   },
   permohonan: {
-    type: DataTypes.ENUM('PDS', 'LEMBUR', 'TRANSPORT'),
+    type: DataTypes.ENUM('PDS', 'LEMBUR', 'TRANSPORTASI'),
     allowNull: false
   },
   tanggalPengajuan: {
@@ -34,8 +34,12 @@ const Pds = sequelize.define('Pds', {
   },
   ttdDigitalUrl: { type: DataTypes.STRING, allowNull: false },
   status: {
-    type: DataTypes.ENUM('PENDING', 'APPROVED', 'COMPLETED'),
+    type: DataTypes.ENUM('PENDING', 'APPROVED', 'SUBMITTED', 'COMPLETED'),
     defaultValue: 'PENDING'
+  },
+  buktiSubmittedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   },
   nominalPDS: { 
     type: DataTypes.DECIMAL(15, 2), 

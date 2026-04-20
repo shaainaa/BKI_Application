@@ -14,7 +14,8 @@
             }
             const newPds = await Pds.create({
                 userId: data.get('userId'),
-                permohonan: data.get('permohonan'),
+                permohonan: (data.get('permohonan') as string).toUpperCase(),
+                tanggalPengajuan: data.get('tanggalPengajuan') || undefined,
                 lokasi: data.get('lokasi'),
                 keperluan: data.get('keperluan'),
                 noAgenda: data.get('noAgenda'),

@@ -27,6 +27,23 @@ const BuktiPds = sequelize.define('BuktiPds', {
   },
   namaFile: {
     type: DataTypes.STRING, // Opsional: menyimpan nama asli file
+  },
+  verificationStatus: {
+    type: DataTypes.ENUM('PENDING', 'DITERIMA', 'DIREJECT'),
+    allowNull: false,
+    defaultValue: 'PENDING'
+  },
+  verificationNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  verifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  verifiedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   }
 }, {
   tableName: 'bukti_pds',
