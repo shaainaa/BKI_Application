@@ -14,9 +14,19 @@ import {
 } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
+import { Pds, BuktiPds } from '@/types/pds';
+
+type RiwayatRow = Pds & {
+  statusPembayaran?: string | null;
+  tanggalPembayaran?: string | null;
+  nominalPDS?: number | null;
+  sps?: string | null;
+  so?: string | null;
+  noAgenda?: string | number | null;
+};
 
 export default function RiwayatPDS() {
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<RiwayatRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // States untuk Filter Dinamis (Sesuai Permohonan PDS)
@@ -32,7 +42,7 @@ export default function RiwayatPDS() {
   const [selectedLokasi, setSelectedLokasi] = useState<string[]>([]);
   const [selectedKeperluan, setSelectedKeperluan] = useState<string[]>([]);
 
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<RiwayatRow | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -100,7 +110,7 @@ export default function RiwayatPDS() {
     }).format(angka);
   };
 
-  const toggleFilter = (list: string[], setList: any, value: string) => {
+  const toggleFilter = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
     if (list.includes(value)) {
       setList(list.filter(i => i !== value));
     } else {
@@ -239,8 +249,15 @@ export default function RiwayatPDS() {
 }
 
 // Reusable Components (StatCard & FilterDropdown dari Permohonan PDS)
-function StatCard({ title, count, color, icon }: any) {
-  const themes: any = {
+interface StatCardProps {
+  title: string;
+  count: string | number;
+  color: 'green' | 'blue' | 'orange';
+  icon: React.ReactNode;
+}
+
+function StatCard({ title, count, color, icon }: StatCardProps) {
+  const themes: Record<StatCardProps['color'], { bg: string; border: string; text: string; iconBg: string }> = {
     green: { bg: "bg-green-50", border: "border-green-300", text: "text-green-600", iconBg: "bg-green-200" },
     blue: { bg: "bg-blue-50", border: "border-blue-300", text: "text-blue-600", iconBg: "bg-blue-200" },
     orange: { bg: "bg-orange-50", border: "border-orange-300", text: "text-orange-600", iconBg: "bg-orange-200" },
@@ -257,7 +274,19 @@ function StatCard({ title, count, color, icon }: any) {
   );
 }
 
-function FilterDropdown({ label, isOpen, setIsOpen, searchValue, setSearchValue, options, selectedOptions, onToggle, otherDropdownClose }: any) {
+interface FilterDropdownProps {
+  label: string;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  searchValue: string;
+  setSearchValue: React.Dispatch<React.SetStateAction<string>>;
+  options: string[];
+  selectedOptions: string[];
+  onToggle: (value: string) => void;
+  otherDropdownClose: () => void;
+}
+
+function FilterDropdown({ label, isOpen, setIsOpen, searchValue, setSearchValue, options, selectedOptions, onToggle, otherDropdownClose }: FilterDropdownProps) {
   return (
     <div className="relative">
       <button 

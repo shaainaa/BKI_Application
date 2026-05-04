@@ -1,26 +1,268 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Design tokens - Soft Navy Palette */
+  --background: #f6f8fb;
+  --foreground: #0f1724;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Primary Palette (Navy-based, soft) */
+  --color-primary: #0b3b7a;
+  --color-primary-400: #2e66a8;
+  --color-primary-700: #072644;
+  --color-primary-50: #f0f5fd;
+
+  /* Secondary (Soft Teal/Cyan accent) */
+  --color-accent: #0a8e9a;
+  --color-accent-light: #6bb7be;
+
+  /* Semantic colors */
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #2e66a8;
+
+  /* Neutral & UI */
+  --color-text-primary: #0f1724;
+  --color-text-secondary: #4b5563;
+  --color-border: #d9dfe7;
+  --color-muted: #cbd5e1;
+  --color-surface: #ffffff;
+  --color-bg-light: #f9fafb;
+
+  /* Spacing & Typography */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(15,23,36,0.05);
+  --shadow-md: 0 4px 12px rgba(15,23,36,0.08);
+  --shadow-lg: 0 10px 24px rgba(15,23,36,0.12);
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+  --gap-xl: 32px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b1220;
+    --foreground: #e5e7eb;
   }
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+}
+
+/* Typography hierarchy */
+h1, h2, h3, h4 { font-weight: 600; color: var(--color-text-primary); }
+h1 { font-size: 2rem; line-height: 1.2; }
+h2 { font-size: 1.5rem; line-height: 1.3; }
+h3 { font-size: 1.25rem; line-height: 1.4; }
+
+/* Form controls */
+input, textarea, select {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 0.75rem;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-50);
+}
+
+input:disabled, textarea:disabled, select:disabled {
+  background: var(--color-bg-light);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+input[aria-invalid="true"], textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+input[aria-invalid="true"]:focus, textarea[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+/* Button base styles */
+.btn-base {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-sm);
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-base:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-base:disabled,
+.btn-base[aria-busy="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-700);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-secondary {
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-400);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-primary-400);
+  color: white;
+}
+
+.btn-secondary:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-danger:focus {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+
+/* Card layout */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--gap-lg);
+  border: 1px solid var(--color-border);
+}
+
+.card-header {
+  padding-bottom: var(--gap-md);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--gap-md);
+}
+
+/* Alert/message boxes */
+.alert {
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  border-left: 4px solid;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  border-left-color: var(--color-success);
+  color: #165e31;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  border-left-color: var(--color-danger);
+  color: #7f1d1d;
+}
+
+.alert-warning {
+  background: #fefce8;
+  border-left-color: var(--color-warning);
+  color: #78350f;
+}
+
+.alert-info {
+  background: #f0f4fd;
+  border-left-color: var(--color-info);
+  color: #082d5e;
+}
+
+/* Accessibility utilities */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to main content link (show on focus) */
+.skip-to-main:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--color-primary);
+  color: white;
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* Focus visible for better keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

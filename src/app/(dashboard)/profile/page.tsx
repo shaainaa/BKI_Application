@@ -43,7 +43,6 @@ const initialForm: ProfileForm = {
 export default function ProfilePage() {
   const router = useRouter();
   const [form, setForm] = useState<ProfileForm>(initialForm);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -52,28 +51,12 @@ export default function ProfilePage() {
   const isChangingPassword = useMemo(() => form.newPassword.trim().length > 0, [form.newPassword]);
 
   useEffect(() => {
-    const userRaw = localStorage.getItem('user');
-    const user = JSON.parse(userRaw || '{}');
-
-    if (!user.id) {
-      router.push('/login');
-      return;
-    }
-
-    setCurrentUserId(Number(user.id));
-  }, [router]);
-
-  useEffect(() => {
     const fetchProfile = async () => {
-      if (!currentUserId) {
-        return;
-      }
-
       setLoading(true);
       setError('');
 
       try {
-        const res = await fetch(`/api/profile?userId=${currentUserId}`, { cache: 'no-store' });
+        const res = await fetch('/api/profile', { cache: 'no-store' });
         const result = await res.json();
 
         if (!res.ok || !result.success) {
@@ -102,7 +85,7 @@ export default function ProfilePage() {
     };
 
     fetchProfile();
-  }, [currentUserId]);
+  }, [router]);
 
   const onInput = (key: keyof ProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -122,9 +105,6 @@ export default function ProfilePage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!currentUserId) {
-      return;
-    }
 
     setMessage('');
     setError('');
@@ -142,7 +122,6 @@ export default function ProfilePage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: currentUserId,
           nama: form.nama.trim(),
           username: form.username.trim(),
           noTelp: form.noTelp.trim(),
@@ -158,11 +137,6 @@ export default function ProfilePage() {
       if (!res.ok || !result.success) {
         throw new Error(result.error || 'Gagal memperbarui profil.');
       }
-
-      const latestUser = result.data as UserProfile;
-      const localUserRaw = localStorage.getItem('user');
-      const localUser = JSON.parse(localUserRaw || '{}');
-      localStorage.setItem('user', JSON.stringify({ ...localUser, ...latestUser }));
 
       setMessage('Profil berhasil diperbarui.');
       setForm((prev) => ({ ...prev, currentPassword: '', newPassword: '' }));

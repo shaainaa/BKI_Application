@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Unauthorized'}, { status: 401});
     }
 
-    const whereClause: Record<string, any> = { userId };
+    const whereClause: Record<string, string> = { userId };
     if (status) {
       whereClause.status = status;
     }
@@ -44,8 +44,9 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: listPds });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching PDS with User:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

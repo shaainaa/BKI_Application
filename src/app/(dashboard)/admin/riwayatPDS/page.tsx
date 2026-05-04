@@ -4,6 +4,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Download, FileText, XCircle } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
+import { Pds, BuktiPds } from '@/types/pds';
+
+type RiwayatPdsRow = Pds & {
+  statusPembayaran?: string | null;
+  tanggalPembayaran?: string | null;
+  nominalPDS?: number | null;
+  sps?: string | null;
+  so?: string | null;  nomorPdsTrans?: string | null;  noAgenda?: string | number | null;
+};
 
 const DEFAULT_FILTERS = {
 	nama: '',
@@ -18,9 +27,9 @@ const DEFAULT_FILTERS = {
 };
 
 export default function AdminRiwayatPDSPage() {
-	const [listPds, setListPds] = useState<any[]>([]);
+	const [listPds, setListPds] = useState<RiwayatPdsRow[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [previewData, setPreviewData] = useState<any>(null);
+	const [previewData, setPreviewData] = useState<RiwayatPdsRow | null>(null);
 	const [processingPaymentId, setProcessingPaymentId] = useState<number | null>(null);
 
 	const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
@@ -32,8 +41,8 @@ export default function AdminRiwayatPDSPage() {
 			const result = await res.json();
 
 			if (result.success) {
-				const completedOnly = (result.data || []).filter((item: any) => item.status === 'COMPLETED');
-				setListPds(completedOnly);
+				const completedOnly = (result.data || []).filter((item: RiwayatPdsRow) => item.status === 'COMPLETED');
+				setListPds(completedOnly as RiwayatPdsRow[]);
 			}
 		} catch (err) {
 			console.error('Gagal mengambil riwayat PDS:', err);
@@ -46,13 +55,13 @@ export default function AdminRiwayatPDSPage() {
 		fetchCompletedPds();
 	}, []);
 
-	const formatDate = (dateString: string) => {
+	const formatDate = (dateString?: string | null) => {
 		if (!dateString) return '-';
 		const d = new Date(dateString);
 		return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
 	};
 
-	const formatDateInput = (dateString: string) => {
+	const formatDateInput = (dateString?: string | null) => {
 		if (!dateString) return '';
 		const d = new Date(dateString);
 		if (Number.isNaN(d.getTime())) return '';
@@ -60,15 +69,15 @@ export default function AdminRiwayatPDSPage() {
 	};
 
 	const filterOptions = useMemo(() => {
-		const nama = Array.from(new Set(listPds.map((item: any) => item.user?.nama || item.user?.name).filter(Boolean)));
-		const lokasi = Array.from(new Set(listPds.map((item: any) => item.lokasi).filter(Boolean)));
-		const permohonan = Array.from(new Set(listPds.map((item: any) => item.permohonan).filter(Boolean)));
-		const keperluan = Array.from(new Set(listPds.map((item: any) => item.keperluan).filter(Boolean)));
+		const nama = Array.from(new Set(listPds.map((item: RiwayatPdsRow) => item.user?.nama || '').filter(Boolean)));
+			const lokasi = Array.from(new Set(listPds.map((item: RiwayatPdsRow) => item.lokasi || '').filter(Boolean)));
+			const permohonan = Array.from(new Set(listPds.map((item: RiwayatPdsRow) => item.permohonan || '').filter(Boolean)));
+			const keperluan = Array.from(new Set(listPds.map((item: RiwayatPdsRow) => item.keperluan || '').filter(Boolean)));
 		const tahun = Array.from(
 			new Set(
 				listPds
-					.map((item: any) => {
-						const d = new Date(item.tanggalPengajuan);
+					.map((item: RiwayatPdsRow) => {
+						const d = new Date(item.tanggalPengajuan || '');
 						return Number.isNaN(d.getTime()) ? null : String(d.getFullYear());
 					})
 					.filter((value): value is string => Boolean(value))
@@ -79,15 +88,15 @@ export default function AdminRiwayatPDSPage() {
 	}, [listPds]);
 
 	const filteredPds = useMemo(() => {
-		return listPds.filter((item: any) => {
-			const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
-			const lokasi = (item.lokasi || '').toLowerCase();
-			const permohonan = (item.permohonan || '').toLowerCase();
-			const keperluan = (item.keperluan || '').toLowerCase();
-			const itemDate = formatDateInput(item.tanggalPengajuan);
-			const itemPaymentDate = formatDateInput(item.tanggalPembayaran);
-			const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
-			const itemYear = itemDate ? itemDate.slice(0, 4) : '';
+		return listPds.filter((item: RiwayatPdsRow) => {
+				const namaUser = (item.user?.nama || '').toLowerCase();
+				const lokasi = (item.lokasi || '').toLowerCase();
+				const permohonan = (item.permohonan || '').toLowerCase();
+				const keperluan = (item.keperluan || '').toLowerCase();
+				const itemDate = formatDateInput(item.tanggalPengajuan || '');
+				const itemPaymentDate = formatDateInput(item.tanggalPembayaran || '');
+				const itemYear = itemDate ? itemDate.slice(0, 4) : '';
+				const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
 
 			const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
 			const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
@@ -115,9 +124,8 @@ export default function AdminRiwayatPDSPage() {
 
 	const summary = useMemo(() => {
 		const totalVisit = filteredPds.length;
-		const totalNominal = filteredPds.reduce((total, item: any) => total + (Number(item.nominalPDS) || 0), 0);
-		const sudahDibayar = filteredPds.filter((item: any) => item.statusPembayaran === 'SUDAH_DIBAYAR').length;
-
+		const totalNominal = filteredPds.reduce((total, item: RiwayatPdsRow) => total + (Number(item.nominalPDS || 0) || 0), 0);
+		const sudahDibayar = filteredPds.filter((item: RiwayatPdsRow) => item.statusPembayaran === 'SUDAH_DIBAYAR').length;
 		return { totalVisit, totalNominal, sudahDibayar };
 	}, [filteredPds]);
 
@@ -166,7 +174,7 @@ export default function AdminRiwayatPDSPage() {
 		}
 	};
 
-	const getMonthAndYear = (dateString: string) => {
+	const getMonthAndYear = (dateString?: string | null) => {
 		if (!dateString) return { month: '-', year: '-' };
 		const date = new Date(dateString);
 		if (Number.isNaN(date.getTime())) return { month: '-', year: '-' };
@@ -177,7 +185,7 @@ export default function AdminRiwayatPDSPage() {
 		};
 	};
 
-	const getDayOnly = (dateString: string) => {
+	const getDayOnly = (dateString?: string | null) => {
 		if (!dateString) return '-';
 		const date = new Date(dateString);
 		if (Number.isNaN(date.getTime())) return '-';
@@ -195,15 +203,13 @@ export default function AdminRiwayatPDSPage() {
 			return;
 		}
 
-		const exportData = [...filteredPds].sort(
-			(a: any, b: any) => new Date(a.tanggalPengajuan).getTime() - new Date(b.tanggalPengajuan).getTime()
-		);
+		const exportData = [...filteredPds].sort((a: RiwayatPdsRow, b: RiwayatPdsRow) => new Date(a.tanggalPengajuan || '').getTime() - new Date(b.tanggalPengajuan || '').getTime());
 
 		const XLSX = await import('xlsx');
 
-		const excelRows = exportData.map((item: any) => {
+		const excelRows = exportData.map((item: RiwayatPdsRow) => {
 			const jenis = (item.permohonan || '').toUpperCase();
-			const { month, year } = getMonthAndYear(item.tanggalPengajuan);
+				const { month, year } = getMonthAndYear(item.tanggalPengajuan || '');
 			const nomorPdsTrans = item.nomorPdsTrans || '-';
 
 			return {
@@ -211,17 +217,17 @@ export default function AdminRiwayatPDSPage() {
 				'No. PDS': jenis !== 'TRANSPORTASI' ? nomorPdsTrans : '-',
 				Bulan: month,
 				Tahun: year,
-				Tanggal: getDayOnly(item.tanggalPengajuan),
+				'Tanggal': getDayOnly(item.tanggalPengajuan || ''),
 				Lokasi: item.lokasi || '-',
 				Jenis: jenis || '-',
-				Nama: item.user?.nama || item.user?.name || '-',
+				Nama: item.user?.nama || '-',
 				Keperluan: item.keperluan || '-',
-				Nominal: item.nominalPDS || '-',
+				Nominal: item.nominalPDS ?? 0,
 				SPS: item.sps || item.noAgenda || '-',
 				SO: item.so || '-',
 				'Visit Ke': item.visitKe || '-',
 				'Status Pembayaran': item.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah Dibayar' : 'Belum Dibayar',
-				'Tanggal Pembayaran': formatDate(item.tanggalPembayaran),
+				'Tanggal Pembayaran': formatDate(item.tanggalPembayaran || ''),
 			};
 		});
 
@@ -406,11 +412,11 @@ export default function AdminRiwayatPDSPage() {
 							) : filteredPds.length === 0 ? (
 								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
 							) : (
-								filteredPds.map((data: any) => (
+								filteredPds.map((data: RiwayatPdsRow) => (
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
-										<td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
+										<td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || '-'}</td>
 										<td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
-										<td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
+										<td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan || '')}</td>
 										<td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
 										<td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
 										<td className="py-4 px-6 text-center">
@@ -430,7 +436,7 @@ export default function AdminRiwayatPDSPage() {
 											</span>
 										</td>
 										<td className="py-4 px-6 text-center whitespace-nowrap">
-											{formatDate(data.tanggalPembayaran)}
+											{formatDate(data.tanggalPembayaran || '')}
 										</td>
 										<td className="py-4 px-6">
 											<div className="flex justify-center gap-2">
@@ -480,3 +486,5 @@ export default function AdminRiwayatPDSPage() {
 		</div>
 	);
 }
+
+

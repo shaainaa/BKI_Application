@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { getSidebarItemClassName, sidebarNavClassName, getSidebarSubDotClassName, getSidebarSubItemClassName, sidebarShellClassName } from '@/components/sidebarStyles';
 
 export default function Sidebar() {
   const [isPdsOpen, setIsPdsOpen] = useState<boolean>(true);
@@ -22,7 +23,7 @@ export default function Sidebar() {
   const isPdsActive = isPermohonanActive || isRiwayatActive;
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50">
+    <aside className={sidebarShellClassName}>
       {/* --- Bagian Logo --- */}
       <div className="p-4 flex items-center gap-2">
         <Image
@@ -35,15 +36,11 @@ export default function Sidebar() {
         />
       </div>
       {/* --- Bagian Menu Navigasi --- */}
-      <nav className="flex-1 px-2 space-y-2 overflow-y-auto mt-2">
+      <nav className={sidebarNavClassName}>
         {/* Menu Dashboard */}
         <Link
           href="/dashboard"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isDashboardActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm' // Warna saat aktif
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50' // Warna saat tidak aktif
-          }`}
+          className={getSidebarItemClassName(isDashboardActive)}
         >
           <Home size={20} />
           Dashboard
@@ -53,11 +50,7 @@ export default function Sidebar() {
         <div>
           <button
             onClick={() => setIsPdsOpen(!isPdsOpen)}
-            className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isPdsActive // Warnai toska JIKA halamannya memang PDS, BUKAN karena dropdown-nya sekadar dibuka
-                ? 'text-white bg-[#0A8E9A] shadow-sm'
-                : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-            }`}
+            className={getSidebarItemClassName(isPdsActive) + ' w-full justify-between'}
           >
             <div className="flex items-center gap-3">
               <FileText size={20} />
@@ -71,22 +64,14 @@ export default function Sidebar() {
             <div className="ml-8 mt-2 space-y-1">
               <Link
                 href="/pds/permohonan"
-                className={`flex items-center gap-3 px-2 py-2 text-sm transition-colors ${
-                  isPermohonanActive
-                    ? 'font-bold text-[#0A8E9A]'
-                    : 'font-medium text-gray-500 hover:text-gray-800'
-                }`}>
-                <div className={`w-2 h-2 rounded-full ${isPermohonanActive ? 'bg-[#0A8E9A]' : 'bg-gray-400'}`}></div>
+                className={getSidebarSubItemClassName(isPermohonanActive)}>
+                <div className={getSidebarSubDotClassName(isPermohonanActive)}></div>
                 Permohonan PDS
               </Link>
               <Link
                 href="/pds/riwayat"
-                className={`flex items-center gap-3 px-2 py-2 text-sm transition-colors ${
-                  isRiwayatActive
-                    ? 'font-bold text-[#0A8E9A]'
-                    : 'font-medium text-gray-500 hover:text-gray-800'
-                }`}>
-                <div className={`w-2 h-2 rounded-full ${isRiwayatActive ? 'bg-[#0A8E9A]' : 'bg-gray-400'}`}></div>
+                className={getSidebarSubItemClassName(isRiwayatActive)}>
+                <div className={getSidebarSubDotClassName(isRiwayatActive)}></div>
                 Riwayat PDS
               </Link>
             </div>

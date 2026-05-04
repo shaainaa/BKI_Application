@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { getSidebarItemClassName, getSidebarSubDotClassName, getSidebarSubItemClassName, sidebarNavClassName, sidebarShellClassName } from '@/components/sidebarStyles';
 
 export default function AdminSidebar() {
   const [isPdsOpen, setIsPdsOpen] = useState<boolean>(false);
@@ -29,7 +30,7 @@ export default function AdminSidebar() {
   const isAdminPdsRiwayat = pathname?.includes('/admin/riwayatPDS');
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50">
+    <aside className={sidebarShellClassName}>
       {/* logo */}
       <div className="p-4 flex items-center gap-2">
         <Image
@@ -42,15 +43,11 @@ export default function AdminSidebar() {
         />
       </div>
 
-      <nav className="flex-1 px-2 space-y-2 overflow-y-auto mt-2">
+      <nav className={sidebarNavClassName}>
         {/* dashboard */}
         <Link
           href="/admin/dashboard"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isDashboardActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm'
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-          }`}
+          className={getSidebarItemClassName(isDashboardActive)}
         >
           <Home size={20} />
           Dashboard
@@ -59,11 +56,7 @@ export default function AdminSidebar() {
         {/* manajemen pengguna */}
         <Link
           href="/admin/pengguna"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isUsersActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm'
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-          }`}
+          className={getSidebarItemClassName(isUsersActive)}
         >
           <Users size={20} />
           Pengguna
@@ -73,11 +66,7 @@ export default function AdminSidebar() {
         <div>
           <button
             onClick={() => setIsPdsOpen(!isPdsOpen)}
-            className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-              isAdminPdsActive
-                ? 'text-white bg-[#0A8E9A] shadow-sm'
-                : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-            }`}
+            className={getSidebarItemClassName(isAdminPdsActive) + ' w-full justify-between'}
           >
             <div className="flex items-center gap-3">
               <FileText size={20} />
@@ -90,33 +79,17 @@ export default function AdminSidebar() {
             <div className="ml-8 mt-2 space-y-1">
               <Link
                 href="/admin/persetujuan"
-                className={`flex items-center gap-3 px-2 py-2 text-sm transition-colors ${
-                  isAdminPdsList
-                    ? 'font-bold text-[#0A8E9A]'
-                    : 'font-medium text-gray-500 hover:text-gray-800'
-                }`}
+                className={getSidebarSubItemClassName(isAdminPdsList)}
               >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isAdminPdsList ? 'bg-[#0A8E9A]' : 'bg-gray-400'
-                  }`}
-                ></div>
+                <div className={getSidebarSubDotClassName(isAdminPdsList)}></div>
                 Daftar PDS
               </Link>
 
               <Link
                 href="/admin/riwayatPDS"
-                className={`flex items-center gap-3 px-2 py-2 text-sm transition-colors ${
-                  isAdminPdsRiwayat
-                    ? 'font-bold text-[#0A8E9A]'
-                    : 'font-medium text-gray-500 hover:text-gray-800'
-                }`}
+                className={getSidebarSubItemClassName(isAdminPdsRiwayat)}
               >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isAdminPdsRiwayat ? 'bg-[#0A8E9A]' : 'bg-gray-400'
-                  }`}
-                ></div>
+                <div className={getSidebarSubDotClassName(isAdminPdsRiwayat)}></div>
                 Riwayat PDS
               </Link>
             </div>
@@ -126,11 +99,7 @@ export default function AdminSidebar() {
         {/* laporan */}
         <Link
           href="/admin/reports"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isReportsActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm'
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-          }`}
+          className={getSidebarItemClassName(isReportsActive)}
         >
           <BarChart size={20} />
           Laporan
@@ -139,11 +108,7 @@ export default function AdminSidebar() {
         {/* pengaturan */}
         <Link
           href="/admin/settings"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isSettingsActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm'
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-          }`}
+          className={getSidebarItemClassName(isSettingsActive)}
         >
           <Settings size={20} />
           Pengaturan

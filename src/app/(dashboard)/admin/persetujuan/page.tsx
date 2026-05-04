@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { Pds, BuktiPds, BuktiStatus } from '@/types/pds';
 import {
   Check,
   CheckCircle,
@@ -22,22 +23,30 @@ type NominalPart = {
   amount: string;
 };
 
+type PdsAdminRow = Pds & {
+  bukti?: BuktiPds[];
+  sps?: string;
+  so?: string;
+  nomorPdsTrans?: string;
+  nominalPDS?: number;
+};
+
 const ADMIN_PDS_CACHE_TTL_MS = 15000;
-let adminPdsCache: any[] | null = null;
+let adminPdsCache: PdsAdminRow[] | null = null;
 let adminPdsCacheAt = 0;
-let adminPdsInFlight: Promise<any[] | null> | null = null;
+let adminPdsInFlight: Promise<PdsAdminRow[] | null> | null = null;
 
 export default function AdminPersetujuanPDS() {
   const searchParams = useSearchParams();
-  const [listPds, setListPds] = useState<any[]>([]);
+  const [listPds, setListPds] = useState<PdsAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPds, setSelectedPds] = useState<any>(null);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [selectedPds, setSelectedPds] = useState<Pds | null>(null);
+  const [previewData, setPreviewData] = useState<Pds | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [editForm, setEditForm] = useState<any>({
+  const [editForm, setEditForm] = useState<Record<string, string | number | undefined>>({
     noAgenda: '',
     lokasi: '',
     keperluan: '',
@@ -53,8 +62,8 @@ export default function AdminPersetujuanPDS() {
   });
 
   const [nominalParts, setNominalParts] = useState<NominalPart[]>([{ id: 'default', label: 'Nominal Utama', amount: '' }]);
-  const [buktiDraft, setBuktiDraft] = useState<any[]>([]);
-  const [verificationDecision, setVerificationDecision] = useState<'DITERIMA' | 'DIREJECT' | ''>('');
+  const [buktiDraft, setBuktiDraft] = useState<Partial<BuktiPds>[]>([]);
+  const [verificationDecision, setVerificationDecision] = useState<BuktiStatus | ''>('');
   const [isAcceptedLocked, setIsAcceptedLocked] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
 
@@ -94,7 +103,7 @@ export default function AdminPersetujuanPDS() {
         const result = await res.json();
         if (!result.success) return null;
 
-        const rows = result.data || [];
+        const rows = (result.data || []) as PdsAdminRow[];
         adminPdsCache = rows;
         adminPdsCacheAt = Date.now();
         return rows;
@@ -130,7 +139,7 @@ export default function AdminPersetujuanPDS() {
     setFilters((prev) => ({ ...prev, status: '' }));
   }, [searchParams]);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
     const d = new Date(dateString);
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -144,22 +153,22 @@ export default function AdminPersetujuanPDS() {
   };
 
   const filterOptions = useMemo(() => {
-    const nama = Array.from(new Set(listPds.map((item: any) => item.user?.nama || item.user?.name).filter(Boolean)));
-    const lokasi = Array.from(new Set(listPds.map((item: any) => item.lokasi).filter(Boolean)));
-    const permohonan = Array.from(new Set(listPds.map((item: any) => item.permohonan).filter(Boolean)));
-    const keperluan = Array.from(new Set(listPds.map((item: any) => item.keperluan).filter(Boolean)));
+    const nama = Array.from(new Set(listPds.map((item: Pds) => item.user?.nama || '').filter((n: string) => n)));
+    const lokasi = Array.from(new Set(listPds.map((item: Pds) => item.lokasi || '').filter((l: string) => l)));
+    const permohonan = Array.from(new Set(listPds.map((item: Pds) => item.permohonan || '').filter((p: string) => p)));
+    const keperluan = Array.from(new Set(listPds.map((item: Pds) => item.keperluan || '').filter((k: string) => k)));
 
     return { nama, lokasi, permohonan, keperluan };
   }, [listPds]);
 
   const filteredPds = useMemo(() => {
-    return listPds.filter((item: any) => {
-      const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
+    return listPds.filter((item: Pds) => {
+      const namaUser = (item.user?.nama || '').toLowerCase();
       const lokasi = (item.lokasi || '').toLowerCase();
       const permohonan = (item.permohonan || '').toLowerCase();
       const keperluan = (item.keperluan || '').toLowerCase();
       const status = (item.status || '').toUpperCase();
-      const itemDate = formatDateInput(item.tanggalPengajuan);
+      const itemDate = formatDateInput(item.tanggalPengajuan || '');
 
       const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
       const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
@@ -172,15 +181,15 @@ export default function AdminPersetujuanPDS() {
     });
   }, [listPds, filters]);
 
-  const openManageModal = (pds: any) => {
+  const openManageModal = (pds: PdsAdminRow) => {
     setSelectedPds(pds);
     setEditForm({
       noAgenda: pds.noAgenda || '',
       lokasi: pds.lokasi || '',
       keperluan: pds.keperluan || '',
-      tglBerangkat: formatDateInput(pds.tglBerangkat),
+      tglBerangkat: formatDateInput(pds.tglBerangkat || ''),
       jamBerangkat: pds.jamBerangkat || '',
-      tglKembali: formatDateInput(pds.tglKembali),
+      tglKembali: formatDateInput(pds.tglKembali || ''),
       jamKembali: pds.jamKembali || '',
       visitKe: pds.visitKe || '',
       keteranganVisit: pds.keteranganVisit || 'PROGRESS',
@@ -197,33 +206,33 @@ export default function AdminPersetujuanPDS() {
       },
     ]);
 
-    const buktiList = (pds.bukti || []).map((item: any) => ({
+    const buktiList = (pds.BuktiPdsList || []).map((item: BuktiPds) => ({
       id: item.id,
       kategori: item.kategori,
       fileUrl: item.fileUrl,
-      namaFile: item.namaFile,
+      namaFile: item.fileUrl?.split('/').pop(),
     }));
 
     setBuktiDraft(buktiList);
 
-    const existingStatuses = (pds.bukti || [])
-      .map((item: any) => item.verificationStatus)
-      .filter((value: string) => value === 'DITERIMA' || value === 'DIREJECT');
+    const existingStatuses = (pds.BuktiPdsList || [])
+      .map((item: BuktiPds) => item.verificationStatus)
+      .filter((value: BuktiStatus) => value === 'DITERIMA' || value === 'DIREJECT');
 
-    const acceptedLocked = existingStatuses.length > 0 && existingStatuses.every((status: string) => status === 'DITERIMA');
+    const acceptedLocked = existingStatuses.length > 0 && existingStatuses.every((status: BuktiStatus) => status === 'DITERIMA');
     setIsAcceptedLocked(acceptedLocked);
 
     if (existingStatuses.length === 0) {
       setVerificationDecision('');
-    } else if (existingStatuses.some((status: string) => status === 'DIREJECT')) {
+    } else if (existingStatuses.some((status: BuktiStatus) => status === 'DIREJECT')) {
       setVerificationDecision('DIREJECT');
-    } else if (existingStatuses.every((status: string) => status === 'DITERIMA')) {
+    } else if (existingStatuses.every((status: BuktiStatus) => status === 'DITERIMA')) {
       setVerificationDecision('DITERIMA');
     } else {
       setVerificationDecision('');
     }
 
-    setReviewNotes((pds.bukti || []).find((item: any) => item.verificationNotes)?.verificationNotes || '');
+    setReviewNotes((pds.BuktiPdsList || []).find((item: BuktiPds) => item.verificationNotes)?.verificationNotes || '');
 
     setIsModalOpen(true);
   };
@@ -367,7 +376,7 @@ export default function AdminPersetujuanPDS() {
     }
   };
 
-  const getBuktiSummary = (bukti: any[] = []) => {
+  const getBuktiSummary = (bukti: Partial<BuktiPds>[] = []) => {
     if (!bukti.length) return { label: 'Belum Upload', className: 'bg-gray-100 text-gray-600 border-gray-200' };
 
     const statuses = bukti
@@ -384,8 +393,8 @@ export default function AdminPersetujuanPDS() {
   };
 
   return (
-    <div className="p-8 bg-[#f8f9fa] min-h-screen font-sans">
-      <h1 className="text-[40px] font-bold text-[#202c45] mb-8 tracking-tight">Persetujuan PDS</h1>
+    <div className="p-8 bg-slate-50 min-h-screen font-sans">
+      <h1 className="text-[40px] font-bold text-slate-900 mb-8 tracking-tight">Persetujuan PDS</h1>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
         <div className="mb-6">
@@ -420,7 +429,7 @@ export default function AdminPersetujuanPDS() {
 
         <div className="overflow-x-auto mt-6">
           <table className="w-full text-left text-sm text-gray-800 border-collapse">
-            <thead className="bg-[#b3c1d1] text-[#202c45] text-base font-semibold">
+            <thead className="bg-slate-100 text-slate-900 text-base font-semibold">
               <tr className="whitespace-nowrap">
                 <th className="py-4 px-6 rounded-tl-2xl">Nama Surveyor</th>
                 <th className="py-4 px-6">Lokasi</th>
@@ -439,7 +448,7 @@ export default function AdminPersetujuanPDS() {
               ) : filteredPds.length === 0 ? (
                 <tr><td colSpan={9} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
               ) : (
-                filteredPds.map((data: any) => {
+                filteredPds.map((data: PdsAdminRow) => {
                   const buktiStatus = getBuktiSummary(data.bukti || []);
                   return (
                     <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
@@ -452,12 +461,12 @@ export default function AdminPersetujuanPDS() {
                       <td className="py-4 px-6 text-center">
                         <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${
                           data.status === 'PENDING'
-                            ? 'bg-red-50 text-red-600'
+                            ? 'bg-slate-100 text-slate-700'
                             : data.status === 'APPROVED'
-                            ? 'bg-yellow-50 text-yellow-700'
+                            ? 'bg-teal-50 text-teal-700'
                             : data.status === 'SUBMITTED'
                             ? 'bg-blue-50 text-blue-700'
-                            : 'bg-green-50 text-teal-700'
+                            : 'bg-emerald-50 text-emerald-700'
                         }`}>
                           {data.status}
                         </span>
@@ -513,9 +522,9 @@ export default function AdminPersetujuanPDS() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-black text-gray-400 uppercase">{item.kategori}</p>
-                        <p className="text-sm font-semibold text-gray-700">{item.namaFile || 'File bukti'}</p>
+                        <p className="text-sm font-semibold text-gray-700">{item.fileUrl?.split('/').pop() || 'File bukti'}</p>
                       </div>
-                      <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                      <a href={item.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100" onClick={(e) => { if (!item.fileUrl) e.preventDefault(); }}>
                         <Eye size={14} /> Lihat
                       </a>
                     </div>
@@ -569,27 +578,27 @@ export default function AdminPersetujuanPDS() {
                 <button
                   onClick={handleSaveVerifikasi}
                   disabled={isSaving || buktiDraft.length === 0}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white font-bold px-4 py-3 hover:bg-blue-700 disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white font-bold px-4 py-3 hover:bg-slate-800 disabled:opacity-60"
                 >
                   <Save size={18} /> Kirim Hasil Verifikasi
                 </button>
               </div>
 
-              <div className="space-y-4 bg-teal-50/40 p-6 rounded-2xl border border-teal-100">
-                <h3 className="font-bold text-teal-800 text-sm uppercase tracking-wider">Edit Data PDS & Administrasi</h3>
+              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Edit Data PDS & Administrasi</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input label="No. Agenda" value={editForm.noAgenda} onChange={(val) => setEditForm({ ...editForm, noAgenda: val })} />
-                  <Input label="Lokasi" value={editForm.lokasi} onChange={(val) => setEditForm({ ...editForm, lokasi: val.toUpperCase() })} />
-                  <Input label="Keperluan" value={editForm.keperluan} onChange={(val) => setEditForm({ ...editForm, keperluan: val.toUpperCase() })} />
+                  <Input label="No. Agenda" value={String(editForm.noAgenda || '')} onChange={(val) => setEditForm({ ...editForm, noAgenda: val })} />
+                  <Input label="Lokasi" value={String(editForm.lokasi || '')} onChange={(val) => setEditForm({ ...editForm, lokasi: val.toUpperCase() })} />
+                  <Input label="Keperluan" value={String(editForm.keperluan || '')} onChange={(val) => setEditForm({ ...editForm, keperluan: val.toUpperCase() })} />
                   <Input label="Visit Ke" value={String(editForm.visitKe || '')} onChange={(val) => setEditForm({ ...editForm, visitKe: val })} />
-                  <Input type="date" label="Tgl Berangkat" value={editForm.tglBerangkat} onChange={(val) => setEditForm({ ...editForm, tglBerangkat: val })} />
-                  <Input type="time" label="Jam Berangkat" value={editForm.jamBerangkat} onChange={(val) => setEditForm({ ...editForm, jamBerangkat: val })} />
-                  <Input type="date" label="Tgl Kembali" value={editForm.tglKembali} onChange={(val) => setEditForm({ ...editForm, tglKembali: val })} />
-                  <Input type="time" label="Jam Kembali" value={editForm.jamKembali} onChange={(val) => setEditForm({ ...editForm, jamKembali: val })} />
-                  <Input label="No. SPS" value={editForm.sps} onChange={(val) => setEditForm({ ...editForm, sps: val })} />
-                  <Input label="No. SO" value={editForm.so} onChange={(val) => setEditForm({ ...editForm, so: val })} />
-                  <Input label="No. PDS/Transport" value={editForm.nomorPdsTrans} onChange={(val) => setEditForm({ ...editForm, nomorPdsTrans: val })} />
+                  <Input type="date" label="Tgl Berangkat" value={String(editForm.tglBerangkat || '')} onChange={(val) => setEditForm({ ...editForm, tglBerangkat: val })} />
+                  <Input type="time" label="Jam Berangkat" value={String(editForm.jamBerangkat || '')} onChange={(val) => setEditForm({ ...editForm, jamBerangkat: val })} />
+                  <Input type="date" label="Tgl Kembali" value={String(editForm.tglKembali || '')} onChange={(val) => setEditForm({ ...editForm, tglKembali: val })} />
+                  <Input type="time" label="Jam Kembali" value={String(editForm.jamKembali || '')} onChange={(val) => setEditForm({ ...editForm, jamKembali: val })} />
+                  <Input label="No. SPS" value={String(editForm.sps || '')} onChange={(val) => setEditForm({ ...editForm, sps: val })} />
+                  <Input label="No. SO" value={String(editForm.so || '')} onChange={(val) => setEditForm({ ...editForm, so: val })} />
+                  <Input label="No. PDS/Transport" value={String(editForm.nomorPdsTrans || '')} onChange={(val) => setEditForm({ ...editForm, nomorPdsTrans: val })} />
                   <div>
                     <label className="text-[11px] font-bold uppercase text-teal-700">Keterangan Visit</label>
                     <select value={editForm.keteranganVisit} onChange={(e) => setEditForm({ ...editForm, keteranganVisit: e.target.value })} className="w-full mt-1 bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500">
@@ -599,12 +608,12 @@ export default function AdminPersetujuanPDS() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-teal-200 bg-white p-4 space-y-3">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase text-teal-700">Kalkulator Nominal</h4>
+                    <h4 className="text-xs font-black uppercase text-slate-700">Kalkulator Nominal</h4>
                     <button
                       onClick={() => setNominalParts((prev) => [...prev, { id: `${Date.now()}`, label: '', amount: '' }])}
-                      className="inline-flex items-center gap-1 rounded-lg border border-teal-200 px-2 py-1 text-xs font-bold text-teal-700 hover:bg-teal-50"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
                     >
                       <Plus size={13} /> Tambah
                     </button>
@@ -643,13 +652,13 @@ export default function AdminPersetujuanPDS() {
                     </div>
                   ))}
 
-                  <div className="text-sm font-black text-teal-700">Total: Rp {new Intl.NumberFormat('id-ID').format(totalNominal)}</div>
+                  <div className="text-sm font-black text-slate-700">Total: Rp {new Intl.NumberFormat('id-ID').format(totalNominal)}</div>
                 </div>
 
                 <button
                   onClick={handleSaveAndComplete}
                   disabled={isSaving}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A8E9A] text-white font-bold px-4 py-4 hover:bg-teal-700 disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 text-white font-bold px-4 py-4 hover:bg-teal-700 disabled:opacity-60"
                 >
                   <CheckCircle size={19} /> Simpan & Selesaikan
                 </button>
@@ -663,7 +672,7 @@ export default function AdminPersetujuanPDS() {
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-md p-6">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center bg-gray-50/50">
-              <div className="gap-3 flex items-center text-[#0A8E9A]">
+              <div className="gap-3 flex items-center text-teal-600">
                 <FileText size={24} />
                 <h3 className="font-bold text-gray-800 italic text-xl tracking-tight uppercase">Arsip Surat Permohonan</h3>
               </div>

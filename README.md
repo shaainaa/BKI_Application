@@ -26,7 +26,8 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 2. Pilih salah satu format koneksi database:
 	- `DATABASE_URL`
 	- atau `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-3. Jika akses local dev dari perangkat lain (IP LAN), isi `ALLOWED_DEV_ORIGINS`.
+3. Isi `AUTH_SESSION_SECRET` (minimal 32 karakter) untuk session cookie yang aman.
+4. Jika akses local dev dari perangkat lain (IP LAN), isi `ALLOWED_DEV_ORIGINS`.
 
 Contoh:
 
@@ -36,6 +37,7 @@ DB_PORT="3306"
 DB_USER="root"
 DB_PASSWORD="password"
 DB_NAME="bki_app"
+AUTH_SESSION_SECRET="ganti-dengan-secret-panjang-minimal-32-karakter"
 ALLOWED_DEV_ORIGINS="http://192.168.1.10:3000"
 ```
 
@@ -48,6 +50,13 @@ Untuk deploy ke Vercel:
 
 - Pesan error di halaman login dibuat lebih sederhana untuk user awam.
 - Detail teknis hanya ditampilkan pada mode development agar debugging tetap mudah.
+
+## Session & Authorization
+
+- Login sekarang menggunakan cookie `HttpOnly` (`bki_session`) sehingga tidak bisa dimanipulasi via JavaScript browser.
+- Middleware akan memproteksi route aplikasi (`/dashboard`, `/pds`, `/profile`, `/admin`) dan route API sensitif.
+- Semua endpoint admin (`/api/admin/*`) sekarang divalidasi role `ADMIN` di server.
+- Idle timeout session adalah 30 menit (sliding): setiap request valid ke route terproteksi akan memperpanjang masa session.
 
 ## Learn More
 

@@ -2,6 +2,7 @@ import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { hashPassword, isBcryptHash, verifyPassword } from '@/lib/password';
 import { missingDbEnvs } from '@/lib/db';
+import { attachSessionCookie } from '@/lib/auth-session';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -26,7 +27,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const { username, password } = await req.json();
+    const body = await req.json();
+    const username = String(body?.username || '').trim();
+    const password = String(body?.password || '');
+
+    if (!username || !password) {
+      return loginErrorResponse(400, 'Username dan password wajib diisi.');
+    }
 
     const user = await User.findOne({
       where: { username }
@@ -45,20 +52,32 @@ export async function POST(req: Request) {
         await user.save();
       }
 
-      return NextResponse.json({ 
+      const userPayload = {
+        id: user.getDataValue('id'),
+        nama: user.getDataValue('nama'),
+        email: user.getDataValue('email'),
+        username: user.getDataValue('username'),
+        noTelp: user.getDataValue('noTelp'),
+        jenisBank: user.getDataValue('jenisBank'),
+        noRekening: user.getDataValue('noRekening'),
+        jabatanSurveyor: user.getDataValue('jabatanSurveyor'),
+        role: user.getDataValue('role'),
+      };
+
+      const response = NextResponse.json({
         success: true, 
-        user: {
-          id: user.getDataValue('id'),
-          nama: user.getDataValue('nama'),
-          email: user.getDataValue('email'),
-          username: user.getDataValue('username'),
-          noTelp: user.getDataValue('noTelp'),
-          jenisBank: user.getDataValue('jenisBank'),
-          noRekening: user.getDataValue('noRekening'),
-          jabatanSurveyor: user.getDataValue('jabatanSurveyor'),
-          role: user.getDataValue('role') // Kirimkan role (ADMIN/SURVEYOR) ke frontend
-        } 
+        user: userPayload,
       });
+
+      await attachSessionCookie(response, {
+        id: Number(userPayload.id),
+        nama: String(userPayload.nama || ''),
+        email: String(userPayload.email || ''),
+        username: String(userPayload.username || ''),
+        role: userPayload.role === 'ADMIN' ? 'ADMIN' : 'SURVEYOR',
+      });
+
+      return response;
     }
     return loginErrorResponse(401, 'Username atau password salah.');
   } catch (error: unknown) {

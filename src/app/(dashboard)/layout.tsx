@@ -14,28 +14,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const userRaw = localStorage.getItem('user');
-    const user = JSON.parse(userRaw || '{}');
-    
-    if (!user.id) {
-      router.push('/login');
-    } else if (pathname.startsWith('/admin') && user.role !== 'ADMIN') {
-      alert("Akses Ditolak! Anda bukan Admin.");
-      router.push('/pds/permohonan');
-    } else {
-      setUserRole(user.role); // Simpan role ke state
-      setAuthorized(true);
-    }
-  }, [pathname, router]);
+    let isMounted = true;
 
-  useEffect(() => {
-    setIsMobileSidebarOpen(false);
-  }, [pathname]);
+    const verifySession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        const result = await response.json();
+
+        if (!response.ok || !result?.success || !result?.user) {
+          router.push('/login');
+          return;
+        }
+
+        const role = String(result.user.role || 'SURVEYOR');
+
+        if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+          router.push('/dashboard');
+          return;
+        }
+
+        if (isMounted) {
+          setUserRole(role);
+          setAuthorized(true);
+        }
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    verifySession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, router]);
 
   if (!authorized) return null;
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] overflow-x-hidden">
+    <div className="flex min-h-screen bg-[var(--color-bg-light)] overflow-x-hidden">
       {/* KONDISI SIDEBAR BERDASARKAN ROLE */}
       <div className="hidden lg:block">
         {userRole === 'ADMIN' ? <AdminSidebar /> : <Sidebar />}
@@ -55,7 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col lg:ml-64">
         <Header onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} />
         
-        <main className="w-full flex-1 overflow-x-hidden px-4 pt-2 pb-6 sm:px-6 lg:px-10 lg:pb-10">
+        <main id="main-content" className="w-full flex-1 overflow-x-hidden px-4 pt-2 pb-6 sm:px-6 lg:px-10 lg:pb-10" tabIndex={-1}>
           {children}
         </main>
       </div>

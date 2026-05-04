@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Pds, BuktiPds, BuktiStatus } from '@/types/pds';
 import {
   AlertCircle,
   AlignJustify,
@@ -25,7 +26,7 @@ const BUKTI_KATEGORI_LIST: BuktiKategori[] = ['SURVEY', 'FOTO', 'TRANSPORTASI', 
 
 export default function PermohonanPDS() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<Pds[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [opsiLokasi, setOpsiLokasi] = useState<string[]>([]);
@@ -40,8 +41,8 @@ export default function PermohonanPDS() {
   const [selectedLokasi, setSelectedLokasi] = useState<string[]>([]);
   const [selectedKeperluan, setSelectedKeperluan] = useState<string[]>([]);
 
-  const [previewData, setPreviewData] = useState<any>(null);
-  const [uploadPds, setUploadPds] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<Pds | null>(null);
+  const [uploadPds, setUploadPds] = useState<Pds | null>(null);
   const [uploadingKategori, setUploadingKategori] = useState<string>('');
   const [submittingBukti, setSubmittingBukti] = useState(false);
 
@@ -112,7 +113,7 @@ export default function PermohonanPDS() {
     completed: tableData.filter((i) => i.status === 'COMPLETED').length,
   };
 
-  const toggleFilter = (list: string[], setList: any, value: string) => {
+  const toggleFilter = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
     if (list.includes(value)) {
       setList(list.filter((i) => i !== value));
     } else {
@@ -120,7 +121,7 @@ export default function PermohonanPDS() {
     }
   };
 
-  const getVerificationLabel = (bukti: any[] = []) => {
+  const getVerificationLabel = (bukti: BuktiPds[] = []) => {
     if (!bukti.length) return 'BELUM ADA BUKTI';
 
     const hasReject = bukti.some((item) => item.verificationStatus === 'DIREJECT');
@@ -132,7 +133,7 @@ export default function PermohonanPDS() {
     return 'MENUNGGU VERIFIKASI';
   };
 
-  const getOverallReviewNote = (bukti: any[] = []) => {
+  const getOverallReviewNote = (bukti: BuktiPds[] = []) => {
     const notes = bukti
       .map((item) => (item.verificationNotes || '').trim())
       .filter((note) => Boolean(note));
@@ -162,7 +163,7 @@ export default function PermohonanPDS() {
       }
 
       const latestTableData = await fetchInitialData(false);
-      const latest = (latestTableData || []).find((item: any) => item.id === pdsId);
+      const latest = (latestTableData || []).find((item: Pds) => item.id === pdsId);
       setUploadPds(latest || null);
 
       alert(`${kategori} berhasil diupload.`);
@@ -385,7 +386,7 @@ export default function PermohonanPDS() {
 
               <div className="space-y-3">
                 {BUKTI_KATEGORI_LIST.map((kategori) => {
-                  const existingBukti = uploadPds.bukti?.find((item: any) => item.kategori === kategori);
+                  const existingBukti = (uploadPds?.BuktiPdsList || []).find((item: BuktiPds) => item.kategori === kategori);
                   return (
                     <div key={kategori} className="border rounded-2xl p-4 bg-gray-50/70">
                       <div className="flex flex-wrap gap-3 items-center justify-between">
@@ -484,6 +485,18 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+interface FilterDropdownProps {
+  label: string;
+  isOpen: boolean;
+  setIsOpen: (value: boolean) => void;
+  searchValue: string;
+  setSearchValue: (value: string) => void;
+  options: string[];
+  selectedOptions: string[];
+  onToggle: (value: string) => void;
+  otherDropdownClose: () => void;
+}
+
 function FilterDropdown({
   label,
   isOpen,
@@ -494,7 +507,7 @@ function FilterDropdown({
   selectedOptions,
   onToggle,
   otherDropdownClose,
-}: any) {
+}: FilterDropdownProps) {
   return (
     <div className="relative">
       <button
@@ -537,8 +550,15 @@ function FilterDropdown({
   );
 }
 
-function StatCard({ title, count, color, icon }: any) {
-  const styles: any = {
+interface StatCardProps {
+  title: string;
+  count: number;
+  color: 'pink' | 'orange' | 'blue' | 'yellow' | 'green';
+  icon: React.ReactNode;
+}
+
+function StatCard({ title, count, color, icon }: StatCardProps) {
+  const styles: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
     pink: { bg: 'bg-pink-50', border: 'border-pink-300', text: 'text-pink-600', iconBg: 'bg-pink-200' },
     orange: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-600', iconBg: 'bg-orange-200' },
     blue: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-600', iconBg: 'bg-blue-200' },
@@ -560,7 +580,7 @@ function StatCard({ title, count, color, icon }: any) {
 }
 
 function BadgeStatus({ status }: { status: string }) {
-  const cfg: any = {
+  const cfg: Record<string, string> = {
     PENDING: 'bg-red-50 text-red-600 border-red-200',
     APPROVED: 'bg-yellow-50 text-yellow-600 border-yellow-200',
     SUBMITTED: 'bg-blue-50 text-blue-700 border-blue-200',

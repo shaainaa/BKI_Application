@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/User';
 import { hashPassword } from '@/lib/password';
+import { getSessionFromRequest } from '@/lib/auth-session';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
     const users = await User.findAll({
       where: { role: 'SURVEYOR' },
       attributes: ['id', 'nama', 'email', 'username', 'jabatanSurveyor', 'noTelp', 'jenisBank', 'noRekening', 'role'],
@@ -19,17 +25,20 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
-    const {
-      nama,
-      email,
-      username,
-      password,
-      jabatanSurveyor,
-      noTelp,
-      jenisBank,
-      noRekening,
-    } = body;
+    const nama = String(body?.nama || '').trim();
+    const email = String(body?.email || '').trim().toLowerCase();
+    const username = String(body?.username || '').trim();
+    const password = String(body?.password || '');
+    const jabatanSurveyor = String(body?.jabatanSurveyor || '').trim();
+    const noTelp = String(body?.noTelp || '').trim();
+    const jenisBank = String(body?.jenisBank || '').trim();
+    const noRekening = String(body?.noRekening || '').trim();
 
     if (!nama || !email || !username || !password) {
       return NextResponse.json(

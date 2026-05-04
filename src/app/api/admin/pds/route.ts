@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
+import { getSessionFromRequest } from '@/lib/auth-session';
+
+const ALLOWED_BUKTI_STATUS = new Set(['PENDING', 'DITERIMA', 'DIREJECT']);
+type BuktiUpdatePayload = {
+  id?: number | string;
+  verificationStatus?: string;
+  verifiedBy?: string | null;
+};
 
 // --- SOLUSI AMPUH: PAKSA RELASI SETIAP KALI API DIPANGGIL ---
 function applyAssociations() {
@@ -13,8 +21,13 @@ function applyAssociations() {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
     // Panggil fungsi relasi dulu
     applyAssociations();
 
@@ -36,14 +49,20 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data: allPds });
-  } catch (error: any) {
-    console.error("Error Get Admin PDS:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
+    console.error("Error Get Admin PDS:", message);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     const {
       id,
@@ -68,11 +87,12 @@ export async function PATCH(req: NextRequest) {
       buktiUpdates,
     } = body;
 
-    if (!id) {
+    const pdsId = Number(id);
+    if (!Number.isFinite(pdsId) || pdsId <= 0) {
       return NextResponse.json({ success: false, error: 'ID PDS wajib diisi' }, { status: 400 });
     }
 
-    const updatePayload: Record<string, any> = {};
+    const updatePayload: Record<string, unknown> = {};
 
     if (typeof status !== 'undefined') updatePayload.status = status;
     if (typeof nominal !== 'undefined') updatePayload.nominalPDS = nominal;
@@ -99,16 +119,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (Object.keys(updatePayload).length > 0) {
-      await Pds.update(updatePayload, { where: { id } });
+      await Pds.update(updatePayload, { where: { id: pdsId } });
     }
 
     if (hasBuktiUpdates) {
-      const currentBukti = await BuktiPds.findAll({ where: { pdsId: id } });
-      const currentStatuses = currentBukti.map((item) => item.get('verificationStatus'));
+      const currentBukti = await BuktiPds.findAll({ where: { pdsId } });
+      const currentStatuses = currentBukti.map((item) => String(item.get('verificationStatus') || ''));
       const acceptedLocked =
         currentStatuses.length > 0 && currentStatuses.every((status) => status === 'DITERIMA');
 
-      const wantsReject = buktiUpdates.some((bukti: any) => bukti?.verificationStatus === 'DIREJECT');
+      const wantsReject = (buktiUpdates as BuktiUpdatePayload[]).some((bukti) => bukti?.verificationStatus === 'DIREJECT');
       if (acceptedLocked && wantsReject) {
         return NextResponse.json(
           { success: false, error: 'Bukti yang sudah DITERIMA tidak bisa diubah menjadi DIREJECT' },
@@ -116,11 +136,18 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
-      for (const bukti of buktiUpdates) {
-        if (!bukti?.id) continue;
+      for (const bukti of buktiUpdates as BuktiUpdatePayload[]) {
+        const buktiId = Number(bukti?.id);
+        if (!Number.isFinite(buktiId) || buktiId <= 0) continue;
 
-        const payload: Record<string, any> = {};
+        const payload: Record<string, unknown> = {};
         if (typeof bukti.verificationStatus !== 'undefined') {
+          if (!ALLOWED_BUKTI_STATUS.has(String(bukti.verificationStatus))) {
+            return NextResponse.json(
+              { success: false, error: `Status bukti tidak valid: ${String(bukti.verificationStatus)}` },
+              { status: 400 }
+            );
+          }
           payload.verificationStatus = bukti.verificationStatus;
           payload.verifiedAt = bukti.verificationStatus === 'PENDING' ? null : new Date();
         }
@@ -134,8 +161,8 @@ export async function PATCH(req: NextRequest) {
         if (Object.keys(payload).length > 0) {
           await BuktiPds.update(payload, {
             where: {
-              id: bukti.id,
-              pdsId: id,
+              id: buktiId,
+              pdsId,
             },
           });
         }
@@ -143,7 +170,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
