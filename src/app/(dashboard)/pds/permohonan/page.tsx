@@ -99,8 +99,11 @@ export default function PermohonanPDS() {
   const filteredData = useMemo(() => {
     return tableData.filter((item) => {
       const matchStatus = selectedStatus === '' || item.status === selectedStatus;
-      const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
-      const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
+      const matchLokasi =
+        selectedLokasi.length === 0 || (typeof item.lokasi === 'string' && selectedLokasi.includes(item.lokasi));
+      const matchKeperluan =
+        selectedKeperluan.length === 0 ||
+        (typeof item.keperluan === 'string' && selectedKeperluan.includes(item.keperluan));
       return matchStatus && matchLokasi && matchKeperluan;
     });
   }, [tableData, selectedStatus, selectedLokasi, selectedKeperluan]);
@@ -204,7 +207,7 @@ export default function PermohonanPDS() {
   };
 
   const canEditUploadPds = uploadPds?.status === 'APPROVED';
-  const overallReviewNote = getOverallReviewNote(uploadPds?.bukti || []);
+  const overallReviewNote = getOverallReviewNote(uploadPds?.BuktiPdsList || []);
 
   return (
     <div className="flex-1 bg-gray-50/50 p-8 min-h-screen font-sans w-full overflow-hidden">
@@ -304,10 +307,12 @@ export default function PermohonanPDS() {
               </tr>
             ) : (
               filteredData.map((row) => {
-                const canManageBukti = row.status === 'APPROVED' || (row.bukti || []).length > 0;
+                const canManageBukti = row.status === 'APPROVED' || (row.BuktiPdsList || []).length > 0;
                 return (
                   <tr key={row.id} className="hover:bg-teal-50/30 transition-colors whitespace-nowrap">
-                    <td className="py-4 px-6 text-sm text-gray-600">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {row.tanggalPengajuan ? new Date(row.tanggalPengajuan).toLocaleDateString('id-ID') : '-'}
+                    </td>
                     <td className="py-4 px-6 text-sm text-center font-semibold text-gray-700">{row.noAgenda || '-'}</td>
                     <td className="py-4 px-6 text-sm font-bold text-gray-800">{row.lokasi}</td>
                     <td className="py-4 px-6 text-center">
@@ -318,7 +323,7 @@ export default function PermohonanPDS() {
                       <BadgeStatus status={row.status} />
                     </td>
                     <td className="py-4 px-6 text-center text-xs font-semibold text-gray-700">
-                      {getVerificationLabel(row.bukti || [])}
+                      {getVerificationLabel(row.BuktiPdsList || [])}
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-500 text-center">{row.buktiSubmittedAt ? new Date(row.buktiSubmittedAt).toLocaleString('id-ID') : '-'}</td>
                     <td className="py-4 px-6 text-center">
@@ -373,7 +378,7 @@ export default function PermohonanPDS() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <InfoItem label="Lokasi" value={uploadPds.lokasi} />
                 <InfoItem label="Keperluan" value={uploadPds.keperluan} />
-                <InfoItem label="No Agenda" value={uploadPds.noAgenda || '-'} />
+                <InfoItem label="No Agenda" value={uploadPds.noAgenda} />
                 <InfoItem label="Status PDS" value={uploadPds.status} />
               </div>
 
@@ -476,11 +481,11 @@ export default function PermohonanPDS() {
   );
 }
 
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
       <p className="text-[11px] font-bold uppercase text-gray-400">{label}</p>
-      <p className="text-sm font-semibold text-gray-700 break-words">{value || '-'}</p>
+      <p className="text-sm font-semibold text-gray-700 break-words">{value ?? '-'}</p>
     </div>
   );
 }

@@ -91,8 +91,11 @@ export default function RiwayatPDS() {
     return tableData.filter(item => {
       const matchStatus = item.status === 'COMPLETED'; // Hanya tampilkan yang COMPLETED
       const matchPayment = selectedPaymentStatus === '' || item.statusPembayaran === selectedPaymentStatus;
-      const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
-      const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
+      const matchLokasi =
+        selectedLokasi.length === 0 || (typeof item.lokasi === 'string' && selectedLokasi.includes(item.lokasi));
+      const matchKeperluan =
+        selectedKeperluan.length === 0 ||
+        (typeof item.keperluan === 'string' && selectedKeperluan.includes(item.keperluan));
       return matchStatus && matchPayment && matchLokasi && matchKeperluan;
     });
   }, [tableData, selectedPaymentStatus, selectedLokasi, selectedKeperluan]);
@@ -196,7 +199,9 @@ export default function RiwayatPDS() {
             ) : (
               filteredData.map((row) => (
                 <tr key={row.id} className="hover:bg-teal-50/30 transition-colors">
-                  <td className="py-4 px-6 text-sm text-gray-600 justify-center">{new Date(row.tanggalPengajuan).toLocaleDateString('id-ID')}</td>
+                  <td className="py-4 px-6 text-sm text-gray-600 justify-center">
+                    {row.tanggalPengajuan ? new Date(row.tanggalPengajuan).toLocaleDateString('id-ID') : '-'}
+                  </td>
                   <td className="py-4 px-6 text-sm font-bold text-gray-800 justify-center">{row.lokasi}</td>
                   <td className="py-4 px-6 text-center">
                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-black italic uppercase">{row.permohonan}</span>
