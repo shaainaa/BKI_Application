@@ -20,6 +20,7 @@ function loginErrorResponse(status: number, message: string, detail?: string) {
 export async function POST(req: Request) {
   try {
     if (missingDbEnvs.length > 0) {
+      console.error('Login error: missing DB envs', missingDbEnvs);
       return loginErrorResponse(
         503,
         'Layanan login belum siap. Silakan hubungi admin aplikasi.',
@@ -81,7 +82,15 @@ export async function POST(req: Request) {
     }
     return loginErrorResponse(401, 'Username atau password salah.');
   } catch (error: unknown) {
-    console.error('Login error:', error);
+    if (error instanceof Error) {
+      console.error('Login error:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
+    } else {
+      console.error('Login error:', error);
+    }
     const rawMessage = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
     const isSslProtocolMismatch =
       /server does not support secure connection/i.test(rawMessage) ||
