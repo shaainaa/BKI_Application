@@ -81,7 +81,6 @@ export async function POST(req: Request) {
     }
     return loginErrorResponse(401, 'Username atau password salah.');
   } catch (error: unknown) {
-    console.error('Login error:', error);
     const rawMessage = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
     const isSslProtocolMismatch =
       /server does not support secure connection/i.test(rawMessage) ||
