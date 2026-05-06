@@ -21,8 +21,7 @@ export async function GET() {
       lokasi: lokasi.map((item: any) => item.lokasi).filter(Boolean),
       keperluan: keperluan.map((item: any) => item.keperluan).filter(Boolean)
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

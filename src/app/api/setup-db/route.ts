@@ -14,13 +14,12 @@ export async function GET() {
       success: true, 
       message: "Berhasil! Tabel BuktiPds (dan tabel lainnya) sudah tersinkronisasi dengan database SQL." 
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Gagal sync database:", error);
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
     return NextResponse.json({ 
       success: false, 
       message: "Waduh, gagal sync. Cek console terminalmu ya.", 
-      error: message 
+      error: error.message 
     }, { status: 500 });
   }
 }

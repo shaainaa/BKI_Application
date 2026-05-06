@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
 import User from '@/models/User';
 import { hashPassword, verifyPassword } from '@/lib/password';
-import { getSessionFromRequest } from '@/lib/auth-session';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    const userId = Number(req.nextUrl.searchParams.get('userId'));
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'userId wajib diisi.' }, { status: 400 });
     }
 
-    const user = await User.findByPk(session.id);
+    const user = await User.findByPk(userId);
     if (!user) {
       return NextResponse.json({ success: false, error: 'User tidak ditemukan.' }, { status: 404 });
     }
@@ -38,13 +38,9 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
-    }
-
     const body = await req.json();
     const {
+      userId,
       nama,
       username,
       noTelp,
@@ -55,7 +51,10 @@ export async function PATCH(req: NextRequest) {
       newPassword,
     } = body;
 
-    const id = Number(session.id);
+    const id = Number(userId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'userId wajib diisi.' }, { status: 400 });
+    }
 
     const user = await User.findByPk(id);
     if (!user) {

@@ -37,6 +37,7 @@ export default function LoginPage() {
       const data = isJsonResponse ? await res.json() : null;
 
       if (res.ok && data?.success) {
+        // Simpan data user ke localStorage untuk sesi sederhana
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.user.role === 'ADMIN') {
           router.push('/admin/dashboard');
@@ -60,9 +61,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center font-sans" style={{ background: 'var(--color-bg-light)' }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-200 font-sans">
       {/* Container Utama */}
-      <div className="flex w-full max-w-4xl rounded-[2rem] overflow-hidden min-h-[600px]" style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-lg)' }}>
+      <div className="flex w-full max-w-4xl bg-white rounded-[2rem] overflow-hidden shadow-2xl min-h-[600px]">
         
         {/* Kolom Kiri: Gambar Background (Hidden di Mobile) */}
         <div className="hidden md:block md:w-1/2 relative">
@@ -75,7 +76,7 @@ export default function LoginPage() {
             priority
           />
           {/* Overlay gradasi agar gambar lebih menyatu dengan desain */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--color-primary)/20, var(--color-accent)/10)' }}></div>
+          <div className="absolute inset-0 bg-blue-900/10"></div>
         </div>
 
         {/* Kolom Kanan: Form Login */}
@@ -88,64 +89,47 @@ export default function LoginPage() {
 
             {/* Header Text */}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-primary)' }}>Selamat Datang</h2>
-              <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm">Silakan masukkan akun Anda untuk melanjutkan</p>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">Selamat Datang</h2>
+              <p className="text-gray-400 text-sm">Silakan masukkan akun Anda untuk melanjutkan</p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="alert alert-danger mb-6" role="alert" aria-live="polite">
-                <span className="font-semibold">Login Gagal:</span> {error}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 text-xs mb-6 rounded shadow-sm">
+                {error}
               </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-6">
               {/* Username Input */}
               <div className="space-y-1">
-                <label htmlFor="username" className="text-[10px] font-bold uppercase tracking-[0.1em] ml-1 block" style={{ color: 'var(--color-text-secondary)' }}>
-                  Username <span aria-label="required">*</span>
-                </label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">Username</label>
                 <input 
-                  id="username"
                   type="text" 
-                  placeholder="Masukkan username Anda"
-                  className="w-full p-3 text-sm transition-all"
-                  style={{ background: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)' }}
+                  placeholder="Username"
+                  className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-black text-sm transition-all"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  aria-required="true"
-                  aria-invalid={error ? 'true' : 'false'}
                   required 
                 />
               </div>
 
               {/* Password Input */}
               <div className="space-y-1">
-                <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-[0.1em] ml-1 block" style={{ color: 'var(--color-text-secondary)' }}>
-                  Password <span aria-label="required">*</span>
-                </label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">Password</label>
                 <div className="relative">
                   <input 
-                    id="password"
                     type={showPassword ? "text" : "password"} 
-                    placeholder="Masukkan password Anda"
-                    className="w-full p-3 text-sm transition-all pr-12"
-                    style={{ background: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)' }}
+                    placeholder="Enter password"
+                    className="w-full border-none bg-gray-100 p-4 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-black text-sm transition-all"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    aria-required="true"
-                    aria-invalid={error ? 'true' : 'false'}
                     required 
                   />
                   {/* Toggle Password Visibility */}
                   <button 
                     type="button" 
-                    className="absolute right-3 top-3 transition-colors p-1 rounded-md focus:outline-2 focus:outline-offset-1"
-                    style={{ color: 'var(--color-text-secondary)', outlineColor: 'var(--color-primary)' }}
-                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                    aria-pressed={showPassword}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                    className="absolute right-4 top-4 text-gray-400 hover:text-blue-600 transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -160,15 +144,8 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
-                <div className="text-right mt-2">
-                  <a 
-                    href="#" 
-                    className="text-[11px] font-medium hover:underline focus:outline-2 focus:outline-offset-1 rounded px-1 py-0.5 inline-block transition-colors" 
-                    style={{ color: 'var(--color-primary)', outlineColor: 'var(--color-primary)' }}
-                    aria-label="Lupa password? Reset password akun Anda"
-                  >
-                    Lupa password?
-                  </a>
+                <div className="text-right mt-1">
+                  <a href="#" className="text-[11px] text-blue-600 hover:underline font-medium">Forgot password?</a>
                 </div>
               </div>
               
@@ -176,10 +153,7 @@ export default function LoginPage() {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="btn-primary w-full py-4 rounded-2xl font-bold text-white transition-all transform active:scale-[0.98] flex justify-center items-center"
-                aria-busy={isLoading}
-                aria-label={isLoading ? 'Sedang login, harap tunggu' : 'Login dengan username dan password'}
-                style={{ opacity: isLoading ? '0.7' : '1', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                className={`w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all transform active:scale-[0.98] flex justify-center items-center ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

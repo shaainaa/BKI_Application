@@ -2,25 +2,17 @@
     import { Op } from 'sequelize';
     import  Pds  from '@/models/Pds';
     import { uploadOneToUploadThing } from '@/lib/uploadthing';
-    import { getSessionFromRequest } from '@/lib/auth-session';
 
     export async function POST(req: NextRequest) {
         try {
-            const session = await getSessionFromRequest(req);
-            if (!session) {
-                return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-            }
-
             const data = await req.formData();
-            const userId = Number(session.id);
+            const userId = Number(data.get('userId'));
             const tglBerangkat = data.get('tglBerangkat') as string;
             const tglKembali = data.get('tglKembali') as string;
-            const permohonan = String(data.get('permohonan') || '').trim();
-            const keteranganVisit = String(data.get('keteranganVisit') || '').trim();
 
-            if (!userId || !tglBerangkat || !tglKembali || !permohonan || !keteranganVisit) {
+            if (!userId || !tglBerangkat || !tglKembali) {
                 return NextResponse.json(
-                    { success: false, message: 'Data wajib belum lengkap (permohonan, keterangan, tanggal berangkat/kembali).' },
+                    { success: false, message: 'userId, tglBerangkat, dan tglKembali wajib diisi' },
                     { status: 400 }
                 );
             }
@@ -68,7 +60,7 @@
             }
             const newPds = await Pds.create({
                 userId,
-                permohonan: permohonan.toUpperCase(),
+                permohonan: (data.get('permohonan') as string).toUpperCase(),
                 tanggalPengajuan: data.get('tanggalPengajuan') || undefined,
                 lokasi: data.get('lokasi'),
                 keperluan: data.get('keperluan'),
@@ -78,7 +70,7 @@
                 tglKembali,
                 jamKembali: data.get('jamKembali') || null,
                 visitKe: data.get('visitKe'),
-                keteranganVisit: keteranganVisit.toUpperCase(),
+                keteranganVisit: (data.get('keteranganVisit') as string).toUpperCase(),
                 ttdDigitalUrl: ttdUrl,
                 status: 'PENDING'
             });
