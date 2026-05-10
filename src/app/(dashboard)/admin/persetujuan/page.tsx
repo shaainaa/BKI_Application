@@ -1,43 +1,94 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
+type BuktiStatus = 'PENDING' | 'DITERIMA' | 'DIREJECT';
+
+type BuktiPds = {
+  id: string;
+  kategori?: string;
+  fileUrl?: string;
+  namaFile?: string;
+  verificationStatus?: BuktiStatus;
+  verificationNotes?: string | null;
+  verifiedBy?: number | null;
+};
+
+type PdsUser = {
+  nama?: string;
+  name?: string;
+};
+
+type Pds = {
+  id: number;
+  user?: PdsUser | null;
+  permohonan?: string | null;
+  tanggalPengajuan?: string | null;
+  lokasi?: string | null;
+  keperluan?: string | null;
+  noAgenda?: string | null;
+  tglBerangkat?: string | null;
+  jamBerangkat?: string | null;
+  tglKembali?: string | null;
+  jamKembali?: string | null;
+  visitKe?: string | number | null;
+  keteranganVisit?: string | null;
+  status?: 'PENDING' | 'WAITING_SECOND_APPROVAL' | 'APPROVED' | 'SUBMITTED' | 'COMPLETED' | string | null;
+  nominalPDS?: number | null;
+  so?: string | null;
+  nomorPdsTrans?: string | null;
+  BuktiPdsList?: BuktiPds[] | null;
+};
+
+const isFinalBuktiStatus = (value?: BuktiStatus): value is BuktiStatus =>
+  value === 'DITERIMA' || value === 'DIREJECT';
 import {
   Check,
   CheckCircle,
   Edit,
   Eye,
   FileText,
-  Plus,
   Save,
-  X,
   XCircle,
 } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
-import { useSearchParams } from 'next/navigation';
 
-type NominalPart = {
-  id: string;
-  label: string;
-  amount: string;
+type PdsAdminRow = Pds & {
+  bukti?: BuktiPds[];
+  so?: string;
+  nomorPdsTrans?: string;
+  nominalPDS?: number;
+};
+
+const DEFAULT_FILTERS = {
+  nama: '',
+  lokasi: '',
+  permohonan: '',
+  tahun: '',
+  tanggalMulai: '',
+  tanggalAkhir: '',
+  keperluan: '',
+  status: '',
+  verifikasiBukti: '',
 };
 
 const ADMIN_PDS_CACHE_TTL_MS = 15000;
-let adminPdsCache: any[] | null = null;
+let adminPdsCache: PdsAdminRow[] | null = null;
 let adminPdsCacheAt = 0;
-let adminPdsInFlight: Promise<any[] | null> | null = null;
+let adminPdsInFlight: Promise<PdsAdminRow[] | null> | null = null;
 
 export default function AdminPersetujuanPDS() {
-  const searchParams = useSearchParams();
-  const [listPds, setListPds] = useState<any[]>([]);
+  const [listPds, setListPds] = useState<PdsAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPds, setSelectedPds] = useState<any>(null);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [selectedPds, setSelectedPds] = useState<Pds | null>(null);
+  const [previewData, setPreviewData] = useState<Pds | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  const [editForm, setEditForm] = useState<any>({
+  const [editForm, setEditForm] = useState<Record<string, string | number | undefined>>({
     noAgenda: '',
     lokasi: '',
     keperluan: '',
@@ -47,25 +98,17 @@ export default function AdminPersetujuanPDS() {
     jamKembali: '',
     visitKe: '',
     keteranganVisit: 'PROGRESS',
-    sps: '',
     so: '',
     nomorPdsTrans: '',
   });
 
-  const [nominalParts, setNominalParts] = useState<NominalPart[]>([{ id: 'default', label: 'Nominal Utama', amount: '' }]);
-  const [buktiDraft, setBuktiDraft] = useState<any[]>([]);
-  const [verificationDecision, setVerificationDecision] = useState<'DITERIMA' | 'DIREJECT' | ''>('');
+  const [nominalInput, setNominalInput] = useState('');
+  const [buktiDraft, setBuktiDraft] = useState<Partial<BuktiPds>[]>([]);
+  const [verificationDecision, setVerificationDecision] = useState<BuktiStatus | ''>('');
   const [isAcceptedLocked, setIsAcceptedLocked] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
 
-  const [filters, setFilters] = useState({
-    nama: '',
-    lokasi: '',
-    permohonan: '',
-    tanggal: '',
-    keperluan: '',
-    status: '',
-  });
+  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
   const fetchAllPds = async ({ silent = false, force = false }: { silent?: boolean; force?: boolean } = {}) => {
     if (!silent) {
@@ -94,7 +137,7 @@ export default function AdminPersetujuanPDS() {
         const result = await res.json();
         if (!result.success) return null;
 
-        const rows = result.data || [];
+        const rows = (result.data || []) as PdsAdminRow[];
         adminPdsCache = rows;
         adminPdsCacheAt = Date.now();
         return rows;
@@ -119,18 +162,10 @@ export default function AdminPersetujuanPDS() {
   }, []);
 
   useEffect(() => {
-    const statusParam = (searchParams.get('status') || '').toUpperCase();
-    const allowedStatus = ['PENDING', 'APPROVED', 'SUBMITTED', 'COMPLETED'];
+    setCurrentPage(1);
+  }, [filters]);
 
-    if (allowedStatus.includes(statusParam)) {
-      setFilters((prev) => ({ ...prev, status: statusParam }));
-      return;
-    }
-
-    setFilters((prev) => ({ ...prev, status: '' }));
-  }, [searchParams]);
-
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
     const d = new Date(dateString);
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -144,100 +179,136 @@ export default function AdminPersetujuanPDS() {
   };
 
   const filterOptions = useMemo(() => {
-    const nama = Array.from(new Set(listPds.map((item: any) => item.user?.nama || item.user?.name).filter(Boolean)));
-    const lokasi = Array.from(new Set(listPds.map((item: any) => item.lokasi).filter(Boolean)));
-    const permohonan = Array.from(new Set(listPds.map((item: any) => item.permohonan).filter(Boolean)));
-    const keperluan = Array.from(new Set(listPds.map((item: any) => item.keperluan).filter(Boolean)));
+    const nama = Array.from(new Set(listPds.map((item: Pds) => item.user?.nama || item.user?.name || '').filter((n: string) => n)));
+    const lokasi = Array.from(new Set(listPds.map((item: Pds) => item.lokasi || '').filter((l: string) => l)));
+    const permohonan = Array.from(new Set(listPds.map((item: Pds) => item.permohonan || '').filter((p: string) => p)));
+    const keperluan = Array.from(new Set(listPds.map((item: Pds) => item.keperluan || '').filter((k: string) => k)));
+    const tahun = Array.from(
+      new Set(
+        listPds
+          .map((item: Pds) => {
+            const d = new Date(item.tanggalPengajuan || '');
+            return Number.isNaN(d.getTime()) ? null : String(d.getFullYear());
+          })
+          .filter((value): value is string => Boolean(value))
+      )
+    ).sort((a, b) => Number(b) - Number(a));
 
-    return { nama, lokasi, permohonan, keperluan };
+    return { nama, lokasi, permohonan, keperluan, tahun };
   }, [listPds]);
 
   const filteredPds = useMemo(() => {
-    return listPds.filter((item: any) => {
+    return listPds.filter((item: Pds) => {
       const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
       const lokasi = (item.lokasi || '').toLowerCase();
       const permohonan = (item.permohonan || '').toLowerCase();
       const keperluan = (item.keperluan || '').toLowerCase();
       const status = (item.status || '').toUpperCase();
-      const itemDate = formatDateInput(item.tanggalPengajuan);
+      const itemDate = formatDateInput(item.tanggalPengajuan || '');
+      const itemYear = itemDate ? itemDate.slice(0, 4) : '';
+      const buktiStatus = getBuktiSummary((item as PdsAdminRow).bukti || []);
+      const verifikasiKey = buktiStatus.label === 'Belum Upload'
+        ? 'BELUM_UPLOAD'
+        : buktiStatus.label === 'Menunggu Verifikasi'
+        ? 'MENUNGGU_VERIFIKASI'
+        : buktiStatus.label === 'Perlu Revisi'
+        ? 'PERLU_REVISI'
+        : 'DISETUJUI';
 
       const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
       const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
       const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
-      const matchTanggal = !filters.tanggal || itemDate === filters.tanggal;
+      const matchTahun = !filters.tahun || itemYear === filters.tahun;
+      const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
+      const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
       const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
       const matchStatus = !filters.status || status === filters.status;
+      const matchVerifikasiBukti = !filters.verifikasiBukti || verifikasiKey === filters.verifikasiBukti;
 
-      return matchNama && matchLokasi && matchPermohonan && matchTanggal && matchKeperluan && matchStatus;
+      return (
+        matchNama &&
+        matchLokasi &&
+        matchPermohonan &&
+        matchTahun &&
+        matchTanggalMulai &&
+        matchTanggalAkhir &&
+        matchKeperluan &&
+        matchStatus &&
+        matchVerifikasiBukti
+      );
     });
   }, [listPds, filters]);
 
-  const openManageModal = (pds: any) => {
+  const openManageModal = (pds: PdsAdminRow) => {
     setSelectedPds(pds);
     setEditForm({
       noAgenda: pds.noAgenda || '',
       lokasi: pds.lokasi || '',
       keperluan: pds.keperluan || '',
-      tglBerangkat: formatDateInput(pds.tglBerangkat),
+      tglBerangkat: formatDateInput(pds.tglBerangkat || ''),
       jamBerangkat: pds.jamBerangkat || '',
-      tglKembali: formatDateInput(pds.tglKembali),
+      tglKembali: formatDateInput(pds.tglKembali || ''),
       jamKembali: pds.jamKembali || '',
       visitKe: pds.visitKe || '',
       keteranganVisit: pds.keteranganVisit || 'PROGRESS',
-      sps: pds.sps || '',
       so: pds.so || '',
       nomorPdsTrans: pds.nomorPdsTrans || '',
     });
 
-    setNominalParts([
-      {
-        id: 'default',
-        label: 'Nominal Utama',
-        amount: pds.nominalPDS ? String(pds.nominalPDS) : '',
-      },
-    ]);
+    setNominalInput(pds.nominalPDS ? String(pds.nominalPDS) : '');
 
-    const buktiList = (pds.bukti || []).map((item: any) => ({
+    const buktiList = (pds.BuktiPdsList || []).map((item: BuktiPds) => ({
       id: item.id,
       kategori: item.kategori,
       fileUrl: item.fileUrl,
-      namaFile: item.namaFile,
+      namaFile: item.fileUrl?.split('/').pop(),
     }));
 
     setBuktiDraft(buktiList);
 
-    const existingStatuses = (pds.bukti || [])
-      .map((item: any) => item.verificationStatus)
-      .filter((value: string) => value === 'DITERIMA' || value === 'DIREJECT');
+    const existingStatuses = (pds.BuktiPdsList || [])
+      .map((item: BuktiPds) => item.verificationStatus)
+      .filter(isFinalBuktiStatus);
 
-    const acceptedLocked = existingStatuses.length > 0 && existingStatuses.every((status: string) => status === 'DITERIMA');
+    const acceptedLocked = existingStatuses.length > 0 && existingStatuses.every((status: BuktiStatus) => status === 'DITERIMA');
     setIsAcceptedLocked(acceptedLocked);
 
     if (existingStatuses.length === 0) {
       setVerificationDecision('');
-    } else if (existingStatuses.some((status: string) => status === 'DIREJECT')) {
+    } else if (existingStatuses.some((status: BuktiStatus) => status === 'DIREJECT')) {
       setVerificationDecision('DIREJECT');
-    } else if (existingStatuses.every((status: string) => status === 'DITERIMA')) {
+    } else if (existingStatuses.every((status: BuktiStatus) => status === 'DITERIMA')) {
       setVerificationDecision('DITERIMA');
     } else {
       setVerificationDecision('');
     }
 
-    setReviewNotes((pds.bukti || []).find((item: any) => item.verificationNotes)?.verificationNotes || '');
+    setReviewNotes((pds.BuktiPdsList || []).find((item: BuktiPds) => item.verificationNotes)?.verificationNotes || '');
 
     setIsModalOpen(true);
   };
 
-  const totalNominal = useMemo(() => {
-    return nominalParts.reduce((acc, part) => acc + (Number(part.amount) || 0), 0);
-  }, [nominalParts]);
+  const pagedPds = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPds.slice(start, start + pageSize);
+  }, [filteredPds, currentPage, pageSize]);
 
-  const handleApproveAwal = async (id: number) => {
-    if (!confirm('Setujui permohonan ini? Surveyor akan mendapat akses upload bukti.')) return;
+  const totalPages = Math.max(1, Math.ceil(filteredPds.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const handleApproveAwal = async (id: number, status?: Pds['status']) => {
+    const isSecondStep = status === 'WAITING_SECOND_APPROVAL';
+
+    if (!isSecondStep && !confirm('Tandai pending verifikasi kedua?')) return;
+    if (isSecondStep && !confirm('Setujui permohonan ini? Surveyor akan mendapat akses upload bukti.')) return;
+
     try {
       const res = await fetch('/api/admin/pds', {
         method: 'PATCH',
-        body: JSON.stringify({ id, status: 'APPROVED' }),
+        body: JSON.stringify({ id, status: isSecondStep ? 'APPROVED' : 'WAITING_SECOND_APPROVAL' }),
         headers: { 'Content-Type': 'application/json' },
       });
       const result = await res.json();
@@ -323,8 +394,7 @@ export default function AdminPersetujuanPDS() {
       const payload = {
         id: selectedPds.id,
         status: 'COMPLETED',
-        nominal: totalNominal,
-        sps: editForm.sps,
+        nominal: Number(nominalInput) || 0,
         so: editForm.so,
         nomorPdsTrans: editForm.nomorPdsTrans,
         noAgenda: editForm.noAgenda,
@@ -367,7 +437,7 @@ export default function AdminPersetujuanPDS() {
     }
   };
 
-  const getBuktiSummary = (bukti: any[] = []) => {
+  function getBuktiSummary(bukti: Partial<BuktiPds>[] = []) {
     if (!bukti.length) return { label: 'Belum Upload', className: 'bg-gray-100 text-gray-600 border-gray-200' };
 
     const statuses = bukti
@@ -381,7 +451,7 @@ export default function AdminPersetujuanPDS() {
     if (allAccepted) return { label: 'Disetujui', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
 
     return { label: 'Menunggu Verifikasi', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-  };
+  }
 
   return (
     <div className="p-8 bg-[#f8f9fa] min-h-screen font-sans">
@@ -389,32 +459,132 @@ export default function AdminPersetujuanPDS() {
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
         <div className="mb-6">
-          <p className="font-semibold text-gray-700 mb-3 text-sm">Filter</p>
-          <div className="flex gap-4 flex-wrap">
-            <select value={filters.nama} onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none">
-              <option value="">Semua Nama</option>
-              {filterOptions.nama.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <select value={filters.lokasi} onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none">
-              <option value="">Semua Lokasi</option>
-              {filterOptions.lokasi.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <select value={filters.permohonan} onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none">
-              <option value="">Semua Jenis</option>
-              {filterOptions.permohonan.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <input type="date" value={filters.tanggal} onChange={(e) => setFilters((prev) => ({ ...prev, tanggal: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] text-gray-600 outline-none focus:border-teal-500" />
-            <select value={filters.keperluan} onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none">
-              <option value="">Semua Keperluan</option>
-              {filterOptions.keperluan.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-            <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="border border-gray-300 rounded-full px-5 py-2.5 flex-1 min-w-[150px] bg-white text-gray-600 outline-none focus:border-teal-500 appearance-none">
-              <option value="">Semua Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="SUBMITTED">Submitted</option>
-              <option value="COMPLETED">Complete</option>
-            </select>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="font-semibold text-gray-700 text-sm">Filter</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
+                <select
+                  value={filters.nama}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Nama</option>
+                  {filterOptions.nama.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Lokasi</label>
+                <select
+                  value={filters.lokasi}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Lokasi</option>
+                  {filterOptions.lokasi.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Jenis</label>
+                <select
+                  value={filters.permohonan}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Jenis</option>
+                  {filterOptions.permohonan.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tahun</label>
+                <select
+                  value={filters.tahun}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, tahun: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Tahun</option>
+                  {filterOptions.tahun.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan</label>
+                <select
+                  value={filters.keperluan}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Keperluan</option>
+                  {filterOptions.keperluan.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Mulai</label>
+                <input
+                  type="date"
+                  value={filters.tanggalMulai}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, tanggalMulai: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 text-gray-600 text-sm outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Akhir</label>
+                <input
+                  type="date"
+                  value={filters.tanggalAkhir}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, tanggalAkhir: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 text-gray-600 text-sm outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Verifikasi Bukti</label>
+                <select
+                  value={filters.verifikasiBukti}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, verifikasiBukti: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="BELUM_UPLOAD">Belum Upload</option>
+                  <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
+                  <option value="PERLU_REVISI">Perlu Revisi</option>
+                  <option value="DISETUJUI">Disetujui</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="WAITING_SECOND_APPROVAL">Pending (1/2)</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="SUBMITTED">Submitted</option>
+                  <option value="COMPLETED">Complete</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -436,11 +606,15 @@ export default function AdminPersetujuanPDS() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={9} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
-              ) : filteredPds.length === 0 ? (
+              ) : pagedPds.length === 0 ? (
                 <tr><td colSpan={9} className="text-center py-20 text-gray-400">Tidak ada data yang cocok dengan filter.</td></tr>
               ) : (
-                filteredPds.map((data: any) => {
+                pagedPds.map((data: PdsAdminRow) => {
                   const buktiStatus = getBuktiSummary(data.bukti || []);
+                  const statusLabel = data.status === 'WAITING_SECOND_APPROVAL'
+                    ? 'PENDING (1/2)'
+                    : data.status;
+                  const isWaitingSecond = data.status === 'WAITING_SECOND_APPROVAL';
                   return (
                     <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
@@ -453,13 +627,15 @@ export default function AdminPersetujuanPDS() {
                         <span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest ${
                           data.status === 'PENDING'
                             ? 'bg-red-50 text-red-600'
+                            : data.status === 'WAITING_SECOND_APPROVAL'
+                            ? 'bg-amber-50 text-amber-700'
                             : data.status === 'APPROVED'
                             ? 'bg-yellow-50 text-yellow-700'
                             : data.status === 'SUBMITTED'
                             ? 'bg-blue-50 text-blue-700'
                             : 'bg-green-50 text-teal-700'
                         }`}>
-                          {data.status}
+                          {statusLabel}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-center">
@@ -472,8 +648,16 @@ export default function AdminPersetujuanPDS() {
                           <button onClick={() => setPreviewData(data)} className="p-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all shadow-sm" title="Lihat Surat">
                             <FileText size={18} />
                           </button>
-                          {data.status === 'PENDING' && (
-                            <button onClick={() => handleApproveAwal(data.id)} className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 shadow-md" title="Approve awal">
+                          {(data.status === 'PENDING' || data.status === 'WAITING_SECOND_APPROVAL') && (
+                            <button
+                              onClick={() => handleApproveAwal(data.id, data.status)}
+                              className={`p-2 rounded-xl shadow-md ${
+                                isWaitingSecond
+                                  ? 'bg-amber-400 text-white hover:bg-amber-500'
+                                  : 'bg-green-500 text-white hover:bg-green-600'
+                              }`}
+                              title={isWaitingSecond ? 'Pending approval (klik lagi)' : 'Approve awal'}
+                            >
                               <Check size={18} />
                             </button>
                           )}
@@ -490,6 +674,46 @@ export default function AdminPersetujuanPDS() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-gray-500">
+            Menampilkan {pagedPds.length} dari {filteredPds.length} data
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-600">Baris</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-xs font-semibold text-gray-600"
+              >
+                {[10, 20, 50].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600 disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span className="text-xs font-semibold text-gray-600">{currentPage} / {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -513,9 +737,9 @@ export default function AdminPersetujuanPDS() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-black text-gray-400 uppercase">{item.kategori}</p>
-                        <p className="text-sm font-semibold text-gray-700">{item.namaFile || 'File bukti'}</p>
+                        <p className="text-sm font-semibold text-gray-700">{item.fileUrl?.split('/').pop() || 'File bukti'}</p>
                       </div>
-                      <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                      <a href={item.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100" onClick={(e) => { if (!item.fileUrl) e.preventDefault(); }}>
                         <Eye size={14} /> Lihat
                       </a>
                     </div>
@@ -579,17 +803,16 @@ export default function AdminPersetujuanPDS() {
                 <h3 className="font-bold text-teal-800 text-sm uppercase tracking-wider">Edit Data PDS & Administrasi</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input label="No. Agenda" value={editForm.noAgenda} onChange={(val) => setEditForm({ ...editForm, noAgenda: val })} />
-                  <Input label="Lokasi" value={editForm.lokasi} onChange={(val) => setEditForm({ ...editForm, lokasi: val.toUpperCase() })} />
-                  <Input label="Keperluan" value={editForm.keperluan} onChange={(val) => setEditForm({ ...editForm, keperluan: val.toUpperCase() })} />
+                  <Input label="No. Agenda" value={String(editForm.noAgenda || '')} onChange={(val) => setEditForm({ ...editForm, noAgenda: val })} />
+                  <Input label="Lokasi" value={String(editForm.lokasi || '')} onChange={(val) => setEditForm({ ...editForm, lokasi: val.toUpperCase() })} />
+                  <Input label="Keperluan" value={String(editForm.keperluan || '')} onChange={(val) => setEditForm({ ...editForm, keperluan: val.toUpperCase() })} />
                   <Input label="Visit Ke" value={String(editForm.visitKe || '')} onChange={(val) => setEditForm({ ...editForm, visitKe: val })} />
-                  <Input type="date" label="Tgl Berangkat" value={editForm.tglBerangkat} onChange={(val) => setEditForm({ ...editForm, tglBerangkat: val })} />
-                  <Input type="time" label="Jam Berangkat" value={editForm.jamBerangkat} onChange={(val) => setEditForm({ ...editForm, jamBerangkat: val })} />
-                  <Input type="date" label="Tgl Kembali" value={editForm.tglKembali} onChange={(val) => setEditForm({ ...editForm, tglKembali: val })} />
-                  <Input type="time" label="Jam Kembali" value={editForm.jamKembali} onChange={(val) => setEditForm({ ...editForm, jamKembali: val })} />
-                  <Input label="No. SPS" value={editForm.sps} onChange={(val) => setEditForm({ ...editForm, sps: val })} />
-                  <Input label="No. SO" value={editForm.so} onChange={(val) => setEditForm({ ...editForm, so: val })} />
-                  <Input label="No. PDS/Transport" value={editForm.nomorPdsTrans} onChange={(val) => setEditForm({ ...editForm, nomorPdsTrans: val })} />
+                  <Input type="date" label="Tgl Berangkat" value={String(editForm.tglBerangkat || '')} onChange={(val) => setEditForm({ ...editForm, tglBerangkat: val })} />
+                  <Input type="time" label="Jam Berangkat" value={String(editForm.jamBerangkat || '')} onChange={(val) => setEditForm({ ...editForm, jamBerangkat: val })} />
+                  <Input type="date" label="Tgl Kembali" value={String(editForm.tglKembali || '')} onChange={(val) => setEditForm({ ...editForm, tglKembali: val })} />
+                  <Input type="time" label="Jam Kembali" value={String(editForm.jamKembali || '')} onChange={(val) => setEditForm({ ...editForm, jamKembali: val })} />
+                  <Input label="No. SO" value={String(editForm.so || '')} onChange={(val) => setEditForm({ ...editForm, so: val })} />
+                  <Input label="No. PDS/Transport" value={String(editForm.nomorPdsTrans || '')} onChange={(val) => setEditForm({ ...editForm, nomorPdsTrans: val })} />
                   <div>
                     <label className="text-[11px] font-bold uppercase text-teal-700">Keterangan Visit</label>
                     <select value={editForm.keteranganVisit} onChange={(e) => setEditForm({ ...editForm, keteranganVisit: e.target.value })} className="w-full mt-1 bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500">
@@ -599,51 +822,15 @@ export default function AdminPersetujuanPDS() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-teal-200 bg-white p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase text-teal-700">Kalkulator Nominal</h4>
-                    <button
-                      onClick={() => setNominalParts((prev) => [...prev, { id: `${Date.now()}`, label: '', amount: '' }])}
-                      className="inline-flex items-center gap-1 rounded-lg border border-teal-200 px-2 py-1 text-xs font-bold text-teal-700 hover:bg-teal-50"
-                    >
-                      <Plus size={13} /> Tambah
-                    </button>
-                  </div>
-
-                  {nominalParts.map((part, idx) => (
-                    <div key={part.id} className="grid grid-cols-12 gap-2">
-                      <input
-                        value={part.label}
-                        onChange={(e) => {
-                          const clone = [...nominalParts];
-                          clone[idx].label = e.target.value;
-                          setNominalParts(clone);
-                        }}
-                        placeholder="Nama komponen"
-                        className="col-span-7 border border-gray-300 rounded-lg px-3 py-2 text-xs"
-                      />
-                      <input
-                        type="number"
-                        value={part.amount}
-                        onChange={(e) => {
-                          const clone = [...nominalParts];
-                          clone[idx].amount = e.target.value;
-                          setNominalParts(clone);
-                        }}
-                        placeholder="0"
-                        className="col-span-4 border border-gray-300 rounded-lg px-3 py-2 text-xs"
-                      />
-                      <button
-                        onClick={() => setNominalParts((prev) => prev.filter((_, i) => i !== idx))}
-                        disabled={nominalParts.length === 1}
-                        className="col-span-1 rounded-lg border border-rose-200 text-rose-500 text-xs hover:bg-rose-50 disabled:opacity-40"
-                      >
-                        <X size={14} className="mx-auto" />
-                      </button>
-                    </div>
-                  ))}
-
-                  <div className="text-sm font-black text-teal-700">Total: Rp {new Intl.NumberFormat('id-ID').format(totalNominal)}</div>
+                <div className="rounded-xl border border-teal-200 bg-white p-4">
+                  <label className="text-[11px] font-bold uppercase text-teal-700">Nominal PDS</label>
+                  <input
+                    type="number"
+                    value={nominalInput}
+                    onChange={(e) => setNominalInput(e.target.value)}
+                    placeholder="0"
+                    className="w-full mt-2 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
                 </div>
 
                 <button

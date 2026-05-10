@@ -34,7 +34,7 @@ const Pds = sequelize.define('Pds', {
   },
   ttdDigitalUrl: { type: DataTypes.STRING, allowNull: false },
   status: {
-    type: DataTypes.ENUM('PENDING', 'APPROVED', 'SUBMITTED', 'COMPLETED'),
+    type: DataTypes.ENUM('PENDING', 'WAITING_SECOND_APPROVAL', 'APPROVED', 'SUBMITTED', 'COMPLETED'),
     defaultValue: 'PENDING'
   },
   buktiSubmittedAt: {
@@ -46,10 +46,6 @@ const Pds = sequelize.define('Pds', {
     allowNull: true 
   },
   so: { 
-    type: DataTypes.STRING, 
-    allowNull: true 
-  },
-  sps: { 
     type: DataTypes.STRING, 
     allowNull: true 
   },

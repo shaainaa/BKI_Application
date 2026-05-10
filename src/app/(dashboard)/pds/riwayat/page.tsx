@@ -167,7 +167,6 @@ export default function RiwayatPDS() {
               <th className="py-4 px-6 font-bold text-center">Keperluan</th>
               <th className="py-4 px-6 font-bold text-center">Nominal PDS</th>
               <th className="py-4 px-6 font-bold text-center">SO</th>
-              <th className="py-4 px-6 font-bold text-center">SPS</th>
               <th className="py-4 px-6 font-bold text-center">Status Bayar</th>
               <th className="py-4 px-6 font-bold text-center">Tgl Bayar</th>
               <th className="py-4 px-6 font-bold text-center">Surat</th>
@@ -175,10 +174,10 @@ export default function RiwayatPDS() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={10} className="py-20 text-center text-gray-400">Loading data riwayat...</td></tr>
+              <tr><td colSpan={9} className="py-20 text-center text-gray-400">Loading data riwayat...</td></tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-20 text-center bg-gray-50">
+                <td colSpan={9} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Belum ada riwayat PDS yang selesai.</p>
                 </td>
@@ -194,7 +193,6 @@ export default function RiwayatPDS() {
                   <td className="py-4 px-6 text-sm text-gray-500 italic">{row.keperluan}</td>
                   <td className="py-4 px-6 text-sm font-bold text-teal-700">{row.nominalPDS ? formatRupiah(row.nominalPDS) : '-'}</td>
                   <td className="py-4 px-6 text-sm text-gray-600">{row.noAgenda}</td>
-                  <td className="py-4 px-6 text-sm text-gray-600">-</td> {/* Sesuaikan jika ada kolom SPS di DB */}
                   <td className="py-4 px-6 text-center">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
                       row.statusPembayaran === 'Sudah' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'

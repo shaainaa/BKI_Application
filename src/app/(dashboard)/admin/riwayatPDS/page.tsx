@@ -217,7 +217,7 @@ export default function AdminRiwayatPDSPage() {
 				Nama: item.user?.nama || item.user?.name || '-',
 				Keperluan: item.keperluan || '-',
 				Nominal: item.nominalPDS || '-',
-				SPS: item.sps || item.noAgenda || '-',
+				'No. Agenda': item.noAgenda || '-',
 				SO: item.so || '-',
 				'Visit Ke': item.visitKe || '-',
 				'Status Pembayaran': item.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah Dibayar' : 'Belum Dibayar',

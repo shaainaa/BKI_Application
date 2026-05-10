@@ -49,7 +49,6 @@ export async function PATCH(req: NextRequest) {
       id,
       status,
       nominal,
-      sps,
       so,
       nomorPdsTrans,
       statusPembayaran,
@@ -76,7 +75,6 @@ export async function PATCH(req: NextRequest) {
 
     if (typeof status !== 'undefined') updatePayload.status = status;
     if (typeof nominal !== 'undefined') updatePayload.nominalPDS = nominal;
-    if (typeof sps !== 'undefined') updatePayload.sps = sps;
     if (typeof so !== 'undefined') updatePayload.so = so;
     if (typeof nomorPdsTrans !== 'undefined') updatePayload.nomorPdsTrans = nomorPdsTrans;
     if (typeof statusPembayaran !== 'undefined') updatePayload.statusPembayaran = statusPembayaran;

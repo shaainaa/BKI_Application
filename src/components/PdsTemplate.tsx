@@ -42,7 +42,7 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <DetailRow label="NAMA" value={data.user?.nama || 'N/A'} />
         <DetailRow label="UNTUK PERGI" value={data.lokasi} />
         <DetailRow label="KEPERLUAN" value={data.keperluan} />
-        <DetailRow label="NO SO & SPS" value={data.noAgenda} />
+        <DetailRow label="NO AGENDA" value={data.noAgenda} />
         <DetailRow label="KEBERANGKATAN" value={`${formatOnlyDate(data.tglBerangkat)}                   JAM: ${data.jamBerangkat || '-'}`} />
         <DetailRow label="KEMBALI" value={`${formatOnlyDate(data.tglKembali)}                   JAM: ${data.jamKembali || '-'}`} />
         <DetailRow label="VISIT KE." value={`${data.visitKe}                                                             KETERANGAN VISIT: ${data.keteranganVisit}`} />
