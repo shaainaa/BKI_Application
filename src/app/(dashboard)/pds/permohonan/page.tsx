@@ -19,9 +19,10 @@ import FormPermohonanModal from './form_pds/page';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 
-type BuktiKategori = 'SURVEY' | 'FOTO' | 'TRANSPORTASI' | 'PENGINAPAN' | 'LAINNYA';
+type BuktiKategori = 'SURVEY VISIT' | 'FOTO' | 'TRANSPORTASI' | 'PENGINAPAN' | 'LAINNYA';
 
-const BUKTI_KATEGORI_LIST: BuktiKategori[] = ['SURVEY', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'];
+const BUKTI_KATEGORI_LIST: BuktiKategori[] = ['SURVEY VISIT', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'];
+const REQUIRED_BUKTI: BuktiKategori[] = ['SURVEY VISIT', 'FOTO'];
 
 export default function PermohonanPDS() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -177,6 +178,16 @@ export default function PermohonanPDS() {
   const handleSubmitBukti = async () => {
     if (!uploadPds?.id) return;
 
+    const buktiList = uploadPds?.bukti || [];
+    const missingRequired = REQUIRED_BUKTI.filter(
+      (kategori) => !buktiList.some((item: any) => item?.kategori === kategori)
+    );
+
+    if (missingRequired.length > 0) {
+      alert(`Wajib upload: ${missingRequired.join(', ')} sebelum submit.`);
+      return;
+    }
+
     setSubmittingBukti(true);
     try {
       const res = await fetch('/api/pds/upload', {
@@ -203,6 +214,9 @@ export default function PermohonanPDS() {
   };
 
   const canEditUploadPds = uploadPds?.status === 'APPROVED';
+  const missingRequiredBukti = REQUIRED_BUKTI.filter(
+    (kategori) => !uploadPds?.bukti?.some((item: any) => item?.kategori === kategori)
+  );
   const overallReviewNote = getOverallReviewNote(uploadPds?.bukti || []);
 
   return (
@@ -441,7 +455,7 @@ export default function PermohonanPDS() {
                 {canEditUploadPds && (
                   <button
                     onClick={handleSubmitBukti}
-                    disabled={submittingBukti}
+                    disabled={submittingBukti || missingRequiredBukti.length > 0}
                     className="px-4 py-2 rounded-lg bg-[#0A8E9A] text-white hover:bg-teal-700 font-bold disabled:opacity-60"
                   >
                     {submittingBukti ? 'Mengirim...' : 'Submit Bukti ke Admin'}

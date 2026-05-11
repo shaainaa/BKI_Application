@@ -831,7 +831,7 @@ export default function AdminPersetujuanPDS() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-teal-200 bg-white p-4">
+                <div className="rounded-xl text-black border border-teal-200 bg-white p-4">
                   <label className="text-[11px] font-bold uppercase text-teal-700">Nominal PDS</label>
                   <input
                     type="number"
