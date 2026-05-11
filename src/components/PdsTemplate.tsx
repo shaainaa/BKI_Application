@@ -27,6 +27,14 @@ const styles = StyleSheet.create({
   signatureImg: { width: 80, height: 45, alignSelf: 'center', marginVertical: 5 }
 });
 
+const shouldShowApprovalSignature = (status?: string) => {
+  const normalized = (status || '').toUpperCase();
+  return normalized === 'WAITING_SECOND_APPROVAL'
+    || normalized === 'APPROVED'
+    || normalized === 'SUBMITTED'
+    || normalized === 'COMPLETED';
+};
+
 export const PdsTemplate = ({ data }: { data: any }) => (
   <Document>
     <Page size="A4" style={styles.page}>
@@ -54,7 +62,9 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <View style={styles.signBox}>
           <Text>Mengetahui</Text>
           <Text>SM Operasi</Text>
-          <Image src="/images/AGUNG%20WICAKSONO.jpeg" style={styles.signatureImg} />
+          {shouldShowApprovalSignature(data?.status) && (
+            <Image src="/images/AGUNG%20WICAKSONO.jpeg" style={styles.signatureImg} />
+          )}
           <Text style={{ borderBottomWidth: 1 }}>Ir. Agung Wicaksono</Text>
         </View>
 

@@ -22,6 +22,8 @@ export default function AdminRiwayatPDSPage() {
 	const [loading, setLoading] = useState(true);
 	const [previewData, setPreviewData] = useState<any>(null);
 	const [processingPaymentId, setProcessingPaymentId] = useState<number | null>(null);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
 
 	const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
@@ -45,6 +47,10 @@ export default function AdminRiwayatPDSPage() {
 	useEffect(() => {
 		fetchCompletedPds();
 	}, []);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [filters]);
 
 	const formatDate = (dateString: string) => {
 		if (!dateString) return '-';
@@ -112,6 +118,17 @@ export default function AdminRiwayatPDSPage() {
 			);
 		});
 	}, [listPds, filters]);
+
+	const pagedPds = useMemo(() => {
+		const start = (currentPage - 1) * pageSize;
+		return filteredPds.slice(start, start + pageSize);
+	}, [filteredPds, currentPage, pageSize]);
+
+	const totalPages = Math.max(1, Math.ceil(filteredPds.length / pageSize));
+
+	useEffect(() => {
+		setCurrentPage((prev) => Math.min(prev, totalPages));
+	}, [totalPages]);
 
 	const summary = useMemo(() => {
 		const totalVisit = filteredPds.length;
@@ -196,10 +213,10 @@ export default function AdminRiwayatPDSPage() {
 		}
 
 		const exportData = [...filteredPds].sort(
-			(a: any, b: any) => new Date(a.tanggalPengajuan).getTime() - new Date(b.tanggalPengajuan).getTime()
+			(a: any, b: any) => new Date(a.tglBerangkat || a.tanggalPengajuan).getTime() - new Date(b.tglBerangkat || b.tanggalPengajuan).getTime()
 		);
 
-		const XLSX = await import('xlsx');
+		const XLSX = await import('xlsx-js-style');
 
 		const excelRows = exportData.map((item: any) => {
 			const jenis = (item.permohonan || '').toUpperCase();
@@ -211,7 +228,8 @@ export default function AdminRiwayatPDSPage() {
 				'No. PDS': jenis !== 'TRANSPORTASI' ? nomorPdsTrans : '-',
 				Bulan: month,
 				Tahun: year,
-				Tanggal: getDayOnly(item.tanggalPengajuan),
+				'Tanggal Berangkat': getDayOnly(item.tglBerangkat),
+				'Tanggal Kembali': getDayOnly(item.tglKembali),
 				Lokasi: item.lokasi || '-',
 				Jenis: jenis || '-',
 				Nama: item.user?.nama || item.user?.name || '-',
@@ -226,6 +244,45 @@ export default function AdminRiwayatPDSPage() {
 		});
 
 		const worksheet = XLSX.utils.json_to_sheet(excelRows);
+		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+		const headerStyle = {
+			font: { bold: true, color: { rgb: 'FFFFFF' } },
+			fill: { patternType: 'solid', fgColor: { rgb: '4B5563' } },
+			alignment: { horizontal: 'center', vertical: 'center' },
+			border: {
+				top: { style: 'thin', color: { rgb: '9CA3AF' } },
+				bottom: { style: 'thin', color: { rgb: '9CA3AF' } },
+				left: { style: 'thin', color: { rgb: '9CA3AF' } },
+				right: { style: 'thin', color: { rgb: '9CA3AF' } },
+			},
+		};
+		const cellBorder = {
+			top: { style: 'thin', color: { rgb: 'E5E7EB' } },
+			bottom: { style: 'thin', color: { rgb: 'E5E7EB' } },
+			left: { style: 'thin', color: { rgb: 'E5E7EB' } },
+			right: { style: 'thin', color: { rgb: 'E5E7EB' } },
+		};
+
+		for (let c = range.s.c; c <= range.e.c; c += 1) {
+			const address = XLSX.utils.encode_cell({ r: 0, c });
+			if (worksheet[address]) {
+				worksheet[address].s = headerStyle;
+			}
+		}
+
+		for (let r = range.s.r; r <= range.e.r; r += 1) {
+			for (let c = range.s.c; c <= range.e.c; c += 1) {
+				const address = XLSX.utils.encode_cell({ r, c });
+				if (worksheet[address]) {
+					worksheet[address].s = {
+						...(worksheet[address].s || {}),
+						border: cellBorder,
+					};
+				}
+			}
+		}
+
+		worksheet['!autofilter'] = { ref: worksheet['!ref'] || 'A1' };
 		const workbook = XLSX.utils.book_new();
 		XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat PDS');
 
@@ -403,10 +460,10 @@ export default function AdminRiwayatPDSPage() {
 						<tbody className="divide-y divide-gray-100">
 							{loading ? (
 								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
-							) : filteredPds.length === 0 ? (
+							) : pagedPds.length === 0 ? (
 								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
 							) : (
-								filteredPds.map((data: any) => (
+								pagedPds.map((data: any) => (
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
 										<td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
 										<td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
@@ -460,6 +517,46 @@ export default function AdminRiwayatPDSPage() {
 							)}
 						</tbody>
 					</table>
+				</div>
+
+				<div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+					<p className="text-xs font-semibold text-gray-500">
+						Menampilkan {pagedPds.length} dari {filteredPds.length} data
+					</p>
+					<div className="flex items-center gap-3">
+						<div className="flex items-center gap-2">
+							<span className="text-xs font-semibold text-gray-600">Baris</span>
+							<select
+								value={pageSize}
+								onChange={(e) => {
+									setPageSize(Number(e.target.value));
+									setCurrentPage(1);
+								}}
+								className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-xs font-semibold text-gray-600"
+							>
+								{[10, 20, 50].map((size) => (
+									<option key={size} value={size}>{size}</option>
+								))}
+							</select>
+						</div>
+						<div className="flex items-center gap-2">
+							<button
+								onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+								disabled={currentPage === 1}
+								className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600 disabled:opacity-50"
+							>
+								Prev
+							</button>
+							<span className="text-xs font-semibold text-gray-600">{currentPage} / {totalPages}</span>
+							<button
+								onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+								disabled={currentPage === totalPages}
+								className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600 disabled:opacity-50"
+							>
+								Next
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
 

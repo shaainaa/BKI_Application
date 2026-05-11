@@ -171,6 +171,15 @@ export default function AdminPersetujuanPDS() {
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const formatDateTime = (dateString?: string | null) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return '-';
+    const datePart = d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} ${timePart}`;
+  };
+
   const formatDateInput = (dateString: string) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -619,7 +628,7 @@ export default function AdminPersetujuanPDS() {
                     <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
                       <td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
-                      <td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
+                      <td className="py-4 px-6 text-center">{formatDateTime(data.tanggalPengajuan)}</td>
                       <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                       <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
                       <td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>
