@@ -19,10 +19,10 @@ import FormPermohonanModal from './form_pds/page';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 
-type BuktiKategori = 'SURVEY VISIT' | 'FOTO' | 'TRANSPORTASI' | 'PENGINAPAN' | 'LAINNYA';
+type BuktiKategori = 'SURVEY' | 'FOTO' | 'TRANSPORTASI' | 'PENGINAPAN' | 'LAINNYA';
 
-const BUKTI_KATEGORI_LIST: BuktiKategori[] = ['SURVEY VISIT', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'];
-const REQUIRED_BUKTI: BuktiKategori[] = ['SURVEY VISIT', 'FOTO'];
+const BUKTI_KATEGORI_LIST: BuktiKategori[] = ['SURVEY', 'FOTO', 'TRANSPORTASI', 'PENGINAPAN', 'LAINNYA'];
+const REQUIRED_BUKTI: BuktiKategori[] = ['SURVEY', 'FOTO'];
 
 export default function PermohonanPDS() {
   const [isModalOpen, setIsModalOpen] = useState(false);
