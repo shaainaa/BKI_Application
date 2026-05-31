@@ -266,7 +266,8 @@ export default function AdminPersetujuanPDS() {
 
     setNominalInput(pds.nominalPDS ? String(pds.nominalPDS) : '');
 
-    const buktiList = (pds.BuktiPdsList || []).map((item: BuktiPds) => ({
+    const buktiSource = (pds as PdsAdminRow).bukti || pds.BuktiPdsList || [];
+    const buktiList = buktiSource.map((item: BuktiPds) => ({
       id: item.id,
       kategori: item.kategori,
       fileUrl: item.fileUrl,
@@ -275,7 +276,7 @@ export default function AdminPersetujuanPDS() {
 
     setBuktiDraft(buktiList);
 
-    const existingStatuses = (pds.BuktiPdsList || [])
+    const existingStatuses = buktiSource
       .map((item: BuktiPds) => item.verificationStatus)
       .filter(isFinalBuktiStatus);
 
@@ -292,7 +293,7 @@ export default function AdminPersetujuanPDS() {
       setVerificationDecision('');
     }
 
-    setReviewNotes((pds.BuktiPdsList || []).find((item: BuktiPds) => item.verificationNotes)?.verificationNotes || '');
+    setReviewNotes(buktiSource.find((item: BuktiPds) => item.verificationNotes)?.verificationNotes || '');
 
     setIsModalOpen(true);
   };
