@@ -40,6 +40,7 @@ type AgendaItem = {
 	start: string;
 	end: string;
 	category: "RAPAT" | "DINAS" | "Familiarisasi Dokumen Teknik" | "URGENT" | "EVENT" | "LAINNYA";
+	isPublic?: boolean;
 	suratFileUrl?: string | null;
 	suratNamaFile?: string | null;
 	lampiranList?: Array<{ id: number; namaFile: string; urlFile: string }>;
@@ -53,6 +54,7 @@ type AgendaForm = {
 	start: string;
 	end: string;
 	category: "RAPAT" | "DINAS" | "Familiarisasi Dokumen Teknik" | "URGENT" | "EVENT" | "LAINNYA";
+	isPublic: boolean;
 	fileSurat: File | null;
 	lampiranFiles: File[];
 };
@@ -104,6 +106,7 @@ export default function AdminDashboardPage() {
 		start: "",
 		end: "",
 		category: "RAPAT",
+		isPublic: false,
 		fileSurat: null,
 		lampiranFiles: [],
 	});
@@ -115,6 +118,7 @@ export default function AdminDashboardPage() {
 			start: "",
 			end: "",
 			category: "RAPAT",
+			isPublic: false,
 			fileSurat: null,
 			lampiranFiles: [],
 		});
@@ -159,8 +163,9 @@ export default function AdminDashboardPage() {
 
 	const stats = useMemo(() => {
 		const today = toStartOfDay(new Date());
-		const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 0, 0, 0, 0);
-		const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+		const now = new Date();
+		const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+		const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
 		const totalPds = pdsList.length;
 		const waitingApproval = pdsList.filter((item) => item.status === "PENDING").length;
@@ -186,12 +191,12 @@ export default function AdminDashboardPage() {
 			totalPds,
 			waitingApproval,
 			activeSurveyor,
-			totalAgenda: agendaList.length,
+			totalAgenda: agendaThisMonth,
 			totalSurveyor: surveyorList.length,
 			agendaThisMonth,
 			agendaToday,
 		};
-	}, [agendaList, pdsList, selectedDate, surveyorList.length]);
+	}, [agendaList, pdsList, surveyorList.length]);
 
 	const activities = useMemo(() => {
 		return [...pdsList]
@@ -395,6 +400,7 @@ export default function AdminDashboardPage() {
 			start: formatInputDate(new Date(agenda.start)),
 			end: formatInputDate(new Date(agenda.end)),
 			category: agenda.category,
+			isPublic: Boolean(agenda.isPublic),
 			fileSurat: null,
 			lampiranFiles: [],
 		});
@@ -457,6 +463,7 @@ export default function AdminDashboardPage() {
 			payload.append("start", agendaForm.start);
 			payload.append("end", agendaForm.end);
 			payload.append("category", agendaForm.category);
+			payload.append("isPublic", String(agendaForm.isPublic));
 			payload.append("createdBy", String(user?.id || ""));
 
 			agendaForm.lampiranFiles.forEach((file) => {
@@ -628,7 +635,7 @@ export default function AdminDashboardPage() {
 
 					<article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
 						<div className="mb-3 flex items-center justify-between">
-							<p className="text-sm font-semibold text-emerald-900">Agenda Kalender</p>
+							<p className="text-sm font-semibold text-emerald-900">Agenda Bulan Ini</p>
 							<Calendar className="text-emerald-700" size={20} />
 						</div>
 						<p className="text-3xl font-black text-emerald-900">{stats.totalAgenda}</p>
@@ -644,10 +651,10 @@ export default function AdminDashboardPage() {
 
 					<article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
 						<div className="mb-3 flex items-center justify-between">
-							<p className="text-sm font-semibold text-slate-800">Agenda Bulan Ini</p>
+							<p className="text-sm font-semibold text-slate-800">Agenda Hari Ini</p>
 							<BadgeCheck className="text-slate-700" size={20} />
 						</div>
-						<p className="text-3xl font-black text-slate-900">{stats.agendaThisMonth}</p>
+						<p className="text-3xl font-black text-slate-900">{stats.agendaToday}</p>
 					</article>
 				</section>
 
@@ -810,6 +817,11 @@ export default function AdminDashboardPage() {
 													{agenda.category}
 												</span>
 											</div>
+											{agenda.isPublic && (
+												<span className="mt-1 inline-flex w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+													UMUM
+												</span>
+											)}
 											<p className="mt-1 text-sm text-slate-600">{agenda.description || "-"}</p>
 											<p className="mt-2 text-xs text-slate-500">
 												{formatDateLabel(agenda.start)} - {formatDateLabel(agenda.end)}
@@ -905,7 +917,13 @@ export default function AdminDashboardPage() {
 							{agendaForSelectedDay.map((agenda) => (
 								<div key={`selected-${agenda.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
 									<p className="font-bold text-slate-800">{agenda.title}</p>
-									<p className="mt-1 text-xs text-slate-600">{agenda.category} - {formatDateLabel(agenda.start)} s/d {formatDateLabel(agenda.end)}</p>
+									<div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+										<span>{agenda.category}</span>
+										<span>- {formatDateLabel(agenda.start)} s/d {formatDateLabel(agenda.end)}</span>
+										{agenda.isPublic && (
+											<span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">UMUM</span>
+										)}
+									</div>
 								</div>
 							))}
 						</div>
@@ -913,9 +931,9 @@ export default function AdminDashboardPage() {
 				</section>
 
 				{isAgendaModalOpen && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-						<div className="w-full max-w-2xl rounded-3xl border border-cyan-100 bg-white shadow-2xl">
-							<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+					<div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-3 py-4 backdrop-blur-sm sm:items-center sm:p-4">
+						<div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-2xl sm:rounded-3xl">
+							<div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-4 py-3 md:px-5 md:py-4">
 								<h2 className="text-lg font-black text-slate-900 md:text-xl">
 									{editingAgendaId ? "Edit Agenda" : "Tambah Agenda Baru"}
 								</h2>
@@ -928,7 +946,7 @@ export default function AdminDashboardPage() {
 								</button>
 							</div>
 
-							<form onSubmit={handleSubmitAgenda} className="space-y-3 p-5 md:p-6">
+							<form onSubmit={handleSubmitAgenda} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 md:p-6">
 								<div className="space-y-1">
 									<label className="text-xs font-bold uppercase text-slate-600">Judul</label>
 									<input
@@ -971,6 +989,16 @@ export default function AdminDashboardPage() {
 									</select>
 								</div>
 
+								<div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+									<input
+										type="checkbox"
+										checked={agendaForm.isPublic}
+										onChange={(e) => setAgendaForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
+										className="h-4 w-4 accent-cyan-600"
+									/>
+									<span className="text-sm font-semibold text-slate-700">Agenda Umum (terlihat oleh semua surveyor)</span>
+								</div>
+
 								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 									<div className="space-y-1">
 										<label className="text-xs font-bold uppercase text-slate-600">Tanggal Mulai</label>
@@ -1009,14 +1037,14 @@ export default function AdminDashboardPage() {
 											setIsDraggingSurat(false);
 										}}
 										onDrop={handleDropSurat}
-										className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
+										className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
 											isDraggingSurat
 												? "border-cyan-500 bg-cyan-100 text-cyan-900"
 												: "border-cyan-300 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
 										}`}
 									>
-										<Plus size={14} />
-										<span>
+										<Plus size={14} className="shrink-0" />
+										<span className="min-w-0 truncate">
 											{agendaForm.fileSurat?.name ||
 												(editingAgendaId
 													? "Drop file di sini atau klik untuk ganti file surat"
@@ -1048,14 +1076,14 @@ export default function AdminDashboardPage() {
 											setIsDraggingLampiran(false);
 										}}
 										onDrop={handleDropLampiran}
-										className={`flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
+										className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm transition ${
 											isDraggingLampiran
 												? "border-emerald-500 bg-emerald-100 text-emerald-900"
 												: "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
 										}`}
 									>
-										<Plus size={14} />
-										<span>
+										<Plus size={14} className="shrink-0" />
+										<span className="min-w-0 truncate">
 											{agendaForm.lampiranFiles.length > 0
 												? `${agendaForm.lampiranFiles.length} file dipilih`
 												: "Drop lampiran di sini atau klik untuk tambah"}
@@ -1074,15 +1102,15 @@ export default function AdminDashboardPage() {
 											{agendaForm.lampiranFiles.map((file, index) => (
 												<div
 													key={`${file.name}-${index}`}
-													className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1"
+													className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1"
 												>
-													<p className="text-xs text-slate-600">
+													<p className="min-w-0 truncate text-xs text-slate-600">
 														{index + 1}. {file.name}
 													</p>
 													<button
 														type="button"
 														onClick={() => handleRemoveLampiranFile(index)}
-														className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+														className="shrink-0 text-xs font-semibold text-rose-600 hover:text-rose-700"
 													>
 														Hapus
 													</button>

@@ -121,16 +121,38 @@ export default function PermohonanPDS() {
     }
   };
 
-  const getVerificationLabel = (bukti: any[] = []) => {
-    if (!bukti.length) return 'BELUM ADA BUKTI';
+  const getVerificationBadge = (bukti: any[] = []) => {
+    if (!bukti.length) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+          BELUM ADA BUKTI
+        </span>
+      );
+    }
 
     const hasReject = bukti.some((item) => item.verificationStatus === 'DIREJECT');
-    if (hasReject) return 'BUKTI DIREJECT';
+    if (hasReject) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-700">
+          BUKTI DIREJECT
+        </span>
+      );
+    }
 
     const allAccepted = bukti.every((item) => item.verificationStatus === 'DITERIMA');
-    if (allAccepted) return 'SEMUA DITERIMA';
+    if (allAccepted) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+          SEMUA DITERIMA
+        </span>
+      );
+    }
 
-    return 'MENUNGGU VERIFIKASI';
+    return (
+      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
+        MENUNGGU VERIFIKASI
+      </span>
+    );
   };
 
   const getOverallReviewNote = (bukti: any[] = []) => {
@@ -297,7 +319,6 @@ export default function PermohonanPDS() {
               <th className="py-4 px-6 font-bold text-center">Permohonan</th>
               <th className="py-4 px-6 font-bold text-center">Keperluan</th>
               <th className="py-4 px-6 font-bold text-center">Status PDS</th>
-              <th className="py-4 px-6 font-bold text-center">Status Bukti</th>
               <th className="py-4 px-6 font-bold text-center">Submit Bukti</th>
               <th className="py-4 px-6 font-bold text-center">Surat</th>
               <th className="py-4 px-6 font-bold text-center">Upload Bukti</th>
@@ -306,11 +327,11 @@ export default function PermohonanPDS() {
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={10} className="py-20 text-center text-gray-400">Loading data BKI...</td>
+                <td colSpan={9} className="py-20 text-center text-gray-400">Loading data BKI...</td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-20 text-center bg-gray-50">
+                <td colSpan={9} className="py-20 text-center bg-gray-50">
                   <AlertCircle size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="font-bold text-gray-500 italic text-sm">Tidak ada data yang cocok dengan filter.</p>
                 </td>
@@ -328,10 +349,7 @@ export default function PermohonanPDS() {
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-500 italic max-w-xs overflow-hidden text-ellipsis">{row.keperluan}</td>
                     <td className="py-4 px-6 text-center">
-                      <BadgeStatus status={row.status} />
-                    </td>
-                    <td className="py-4 px-6 text-center text-xs font-semibold text-gray-700">
-                      {getVerificationLabel(row.bukti || [])}
+                      {getVerificationBadge(row.bukti || [])}
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-500 text-center">{row.buktiSubmittedAt ? new Date(row.buktiSubmittedAt).toLocaleString('id-ID') : '-'}</td>
                     <td className="py-4 px-6 text-center">
@@ -573,12 +591,3 @@ function StatCard({ title, count, color, icon }: any) {
   );
 }
 
-function BadgeStatus({ status }: { status: string }) {
-  const cfg: any = {
-    PENDING: 'bg-red-50 text-red-600 border-red-200',
-    APPROVED: 'bg-yellow-50 text-yellow-600 border-yellow-200',
-    SUBMITTED: 'bg-blue-50 text-blue-700 border-blue-200',
-    COMPLETED: 'bg-green-50 text-green-600 border-green-200',
-  };
-  return <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${cfg[status] || cfg.PENDING}`}>{status}</span>;
-}

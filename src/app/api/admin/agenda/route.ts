@@ -9,15 +9,28 @@ import {
 } from '@/lib/uploadthing';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+let agendaSchemaReady: Promise<void> | null = null;
+
+function ensureAgendaSchema() {
+  agendaSchemaReady ??= (async () => {
+    await Agenda.sync({ alter: true });
+    await AgendaLampiran.sync({ alter: true });
+  })();
+
+  return agendaSchemaReady;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureAgendaSchema();
+
     const formData = await req.formData();
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const start = formData.get('start') as string;
     const end = formData.get('end') as string;
     const category = formData.get('category') as string;
+    const isPublicRaw = formData.get('isPublic') as string | null;
     const createdByRaw = formData.get('createdBy') as string;
     const fileSurat = formData.get('fileSurat') as File | null;
     const lampiranFiles = formData.getAll('lampiranFiles').filter((item): item is File => item instanceof File);
@@ -53,6 +66,7 @@ export async function POST(req: NextRequest) {
 
     const agenda = await Agenda.create({
       title, description, start, end, category,
+      isPublic: isPublicRaw === 'true',
       suratFileUrl,
       suratNamaFile: fileSurat.name,
       fileUrl: suratFileUrl,
@@ -80,6 +94,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    await ensureAgendaSchema();
+
     const idRaw = req.nextUrl.searchParams.get('id');
     const id = Number(idRaw);
 
@@ -98,6 +114,7 @@ export async function PUT(req: NextRequest) {
     const start = (formData.get('start') as string) || '';
     const end = (formData.get('end') as string) || '';
     const category = (formData.get('category') as string) || '';
+    const isPublicRaw = formData.get('isPublic') as string | null;
     const fileSurat = formData.get('fileSurat') as File | null;
     const lampiranFiles = formData.getAll('lampiranFiles').filter((item): item is File => item instanceof File);
 
@@ -127,6 +144,7 @@ export async function PUT(req: NextRequest) {
       start,
       end,
       category,
+      isPublic: isPublicRaw === 'true',
       suratFileUrl,
       suratNamaFile,
       fileUrl,
@@ -176,6 +194,8 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    await ensureAgendaSchema();
+
     const idRaw = req.nextUrl.searchParams.get('id');
     const id = Number(idRaw);
 
@@ -213,6 +233,8 @@ export async function DELETE(req: NextRequest) {
 
 export async function GET() {
   try {
+    await ensureAgendaSchema();
+
     const data = await Agenda.findAll({
       include: [
         {

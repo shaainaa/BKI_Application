@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
+import { deleteUploadThingByUrl } from '@/lib/uploadthing';
 
 // --- SOLUSI AMPUH: PAKSA RELASI SETIAP KALI API DIPANGGIL ---
 function applyAssociations() {
@@ -141,6 +142,47 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const idRaw = req.nextUrl.searchParams.get('id');
+    const id = Number(idRaw);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json({ success: false, error: 'ID PDS tidak valid' }, { status: 400 });
+    }
+
+    applyAssociations();
+
+    const pds = await Pds.findByPk(id);
+    if (!pds) {
+      return NextResponse.json({ success: false, error: 'PDS tidak ditemukan' }, { status: 404 });
+    }
+
+    const buktiList = await BuktiPds.findAll({ where: { pdsId: id } });
+    for (const bukti of buktiList) {
+      const fileUrl = bukti.get('fileUrl') as string | null;
+      if (fileUrl) {
+        await deleteUploadThingByUrl(fileUrl);
+      }
+    }
+
+    const ttdUrl = pds.get('ttdDigitalUrl') as string | null;
+    if (ttdUrl) {
+      await deleteUploadThingByUrl(ttdUrl);
+    }
+
+    if (buktiList.length > 0) {
+      await BuktiPds.destroy({ where: { pdsId: id } });
+    }
+
+    await pds.destroy();
+
+    return NextResponse.json({ success: true, message: 'PDS berhasil dihapus' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

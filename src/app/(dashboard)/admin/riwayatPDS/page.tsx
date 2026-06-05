@@ -231,7 +231,6 @@ export default function AdminRiwayatPDSPage() {
 				'Tanggal Berangkat': getDayOnly(item.tglBerangkat),
 				'Tanggal Kembali': getDayOnly(item.tglKembali),
 				Lokasi: item.lokasi || '-',
-				Jenis: jenis || '-',
 				Nama: item.user?.nama || item.user?.name || '-',
 				Keperluan: item.keperluan || '-',
 				Nominal: item.nominalPDS || '-',

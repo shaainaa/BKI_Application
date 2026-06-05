@@ -12,7 +12,9 @@ import {
   FileText,
   Loader2,
   MapPin,
+  Plus,
   Upload,
+  X,
 } from "lucide-react";
 import {
   AreaChart,
@@ -31,9 +33,10 @@ type UserLocal = {
 
 type PdsItem = {
   id: number;
-  status: "PENDING" | "APPROVED" | "COMPLETED";
+  status: "PENDING" | "APPROVED" | "SUBMITTED" | "COMPLETED";
   permohonan?: string;
   lokasi?: string;
+  keperluan?: string;
   tanggalPengajuan?: string;
   tglBerangkat?: string;
   tglKembali?: string;
@@ -51,6 +54,15 @@ type AgendaItem = {
   start: string;
   end: string;
   category: string;
+  source?: "PUBLIC" | "PERSONAL" | "PDS";
+};
+
+type PersonalAgendaForm = {
+  title: string;
+  description: string;
+  start: string;
+  end: string;
+  category: string;
 };
 
 type ActivityItem = {
@@ -65,7 +77,7 @@ type DepartureItem = {
   id: number;
   lokasi: string;
   tanggal: string;
-  status: "PENDING" | "APPROVED" | "COMPLETED";
+  status: "PENDING" | "APPROVED" | "SUBMITTED" | "COMPLETED";
 };
 
 const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -91,16 +103,50 @@ export default function DashboardSurveyorPage() {
 
   const [loading, setLoading] = useState(true);
   const [pdsList, setPdsList] = useState<PdsItem[]>([]);
-  const [agendaList, setAgendaList] = useState<AgendaItem[]>([]);
+  const [publicAgendaList, setPublicAgendaList] = useState<AgendaItem[]>([]);
+  const [personalAgendaList, setPersonalAgendaList] = useState<AgendaItem[]>([]);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [agendaPage, setAgendaPage] = useState(1);
+  const [isPersonalAgendaOpen, setIsPersonalAgendaOpen] = useState(false);
+  const [editingPersonalAgendaId, setEditingPersonalAgendaId] = useState<number | null>(null);
+  const [savingPersonalAgenda, setSavingPersonalAgenda] = useState(false);
+  const [deletingPersonalAgendaId, setDeletingPersonalAgendaId] = useState<number | null>(null);
+  const [pdsAgendaStatusFilter, setPdsAgendaStatusFilter] = useState<string>("");
+  const [pdsAgendaMonth, setPdsAgendaMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [personalAgendaForm, setPersonalAgendaForm] = useState<PersonalAgendaForm>({
+    title: "",
+    description: "",
+    start: "",
+    end: "",
+    category: "LAINNYA",
+  });
 
   const formatInputDate = (date: Date) => {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, "0");
     const day = `${date.getDate()}`.padStart(2, "0");
     return `${year}-${month}-${day}`;
+  };
+
+  const getMonthRange = (monthValue: string) => {
+    const [yearRaw, monthRaw] = monthValue.split("-");
+    const year = Number(yearRaw);
+    const monthIndex = Number(monthRaw) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+      const now = new Date();
+      return {
+        start: new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0),
+        end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+      };
+    }
+    return {
+      start: new Date(year, monthIndex, 1, 0, 0, 0, 0),
+      end: new Date(year, monthIndex + 1, 0, 23, 59, 59, 999),
+    };
   };
 
   const formatDateLabel = (dateString?: string) => {
@@ -135,6 +181,170 @@ export default function DashboardSurveyorPage() {
     return target >= start && target <= end;
   };
 
+  const resetPersonalAgendaForm = (date?: Date) => {
+    const pickedDate = date ? formatInputDate(date) : "";
+    setPersonalAgendaForm({
+      title: "",
+      description: "",
+      start: pickedDate,
+      end: pickedDate,
+      category: "LAINNYA",
+    });
+  };
+
+  const openPersonalAgendaModal = (date?: Date) => {
+    setEditingPersonalAgendaId(null);
+    resetPersonalAgendaForm(date || selectedDate);
+    setIsPersonalAgendaOpen(true);
+  };
+
+  const openEditPersonalAgenda = (agenda: AgendaItem) => {
+    setEditingPersonalAgendaId(agenda.id);
+    setPersonalAgendaForm({
+      title: agenda.title,
+      description: agenda.description || "",
+      start: formatInputDate(new Date(agenda.start)),
+      end: formatInputDate(new Date(agenda.end)),
+      category: agenda.category || "LAINNYA",
+    });
+    setIsPersonalAgendaOpen(true);
+  };
+
+  const closePersonalAgendaModal = () => {
+    setIsPersonalAgendaOpen(false);
+    setEditingPersonalAgendaId(null);
+    resetPersonalAgendaForm();
+  };
+
+  const refreshPersonalAgenda = async (targetUserId: number) => {
+    const response = await fetch(`/api/agenda/personal?userId=${targetUserId}`);
+    const result = await response.json();
+    if (result.success) {
+      const rows = (result.data || []) as AgendaItem[];
+      setPersonalAgendaList(rows.map((item) => ({ ...item, source: "PERSONAL" })));
+    }
+  };
+
+  const handleSubmitPersonalAgenda = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!userId) return;
+
+    if (!personalAgendaForm.start || !personalAgendaForm.end) {
+      alert("Tanggal mulai dan selesai wajib diisi.");
+      return;
+    }
+
+    if (new Date(personalAgendaForm.start) > new Date(personalAgendaForm.end)) {
+      alert("Tanggal selesai tidak boleh lebih awal dari tanggal mulai.");
+      return;
+    }
+
+    setSavingPersonalAgenda(true);
+    try {
+      const payload = {
+        userId,
+        title: personalAgendaForm.title,
+        description: personalAgendaForm.description,
+        start: personalAgendaForm.start,
+        end: personalAgendaForm.end,
+        category: personalAgendaForm.category,
+      };
+
+      const endpoint = editingPersonalAgendaId
+        ? `/api/agenda/personal?id=${editingPersonalAgendaId}`
+        : "/api/agenda/personal";
+
+      const response = await fetch(endpoint, {
+        method: editingPersonalAgendaId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        alert(result.message || result.error || "Gagal menyimpan agenda pribadi.");
+        return;
+      }
+
+      await refreshPersonalAgenda(userId);
+      closePersonalAgendaModal();
+    } catch (error) {
+      console.error("Gagal menyimpan agenda pribadi:", error);
+      alert("Terjadi kesalahan saat menyimpan agenda pribadi.");
+    } finally {
+      setSavingPersonalAgenda(false);
+    }
+  };
+
+  const handleDeletePersonalAgenda = async (agendaId: number) => {
+    if (!userId) return;
+    const ok = window.confirm("Yakin ingin menghapus agenda pribadi ini?");
+    if (!ok) return;
+
+    setDeletingPersonalAgendaId(agendaId);
+    try {
+      const response = await fetch(`/api/agenda/personal?id=${agendaId}&userId=${userId}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(result.message || result.error || "Gagal menghapus agenda pribadi.");
+        return;
+      }
+
+      await refreshPersonalAgenda(userId);
+    } catch (error) {
+      console.error("Gagal menghapus agenda pribadi:", error);
+      alert("Terjadi kesalahan saat menghapus agenda pribadi.");
+    } finally {
+      setDeletingPersonalAgendaId(null);
+    }
+  };
+
+  const pdsAgendaList = useMemo<AgendaItem[]>(() => {
+    const today = toStartOfDay(new Date());
+    return pdsList
+      .filter((item) => item.tglBerangkat)
+      .map((item) => {
+        const start = item.tglBerangkat as string;
+        const end = item.tglKembali || item.tglBerangkat || item.tanggalPengajuan || start;
+        return {
+          id: -item.id,
+          title: `PDS: ${item.lokasi || "Lokasi"}`,
+          description: item.keperluan || "Agenda PDS",
+          start,
+          end,
+          category: "PDS",
+          source: "PDS" as const,
+        };
+        })
+        .filter((agenda) => toStartOfDay(agenda.end) >= today);
+  }, [pdsList]);
+
+    const pdsAgendaRows = useMemo(() => {
+      const { start, end } = getMonthRange(pdsAgendaMonth);
+
+      return pdsList
+        .filter((item) => item.tglBerangkat)
+        .filter((item) => {
+          const startDate = new Date(item.tglBerangkat as string);
+          const endDate = new Date((item.tglKembali as string) || (item.tglBerangkat as string));
+          if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return false;
+          return endDate >= start && startDate <= end;
+        })
+        .filter((item) => !pdsAgendaStatusFilter || item.status === pdsAgendaStatusFilter)
+        .sort((a, b) => new Date(a.tglBerangkat || 0).getTime() - new Date(b.tglBerangkat || 0).getTime());
+    }, [pdsAgendaMonth, pdsAgendaStatusFilter, pdsList]);
+
+  const calendarAgendaList = useMemo(() => {
+    return [...publicAgendaList, ...personalAgendaList, ...pdsAgendaList];
+  }, [publicAgendaList, personalAgendaList, pdsAgendaList]);
+
+  const agendaActivityList = useMemo(() => {
+    return [...publicAgendaList, ...personalAgendaList];
+  }, [publicAgendaList, personalAgendaList]);
+
   useEffect(() => {
     const userString = localStorage.getItem("user");
 
@@ -159,19 +369,30 @@ export default function DashboardSurveyorPage() {
 
       setLoading(true);
       try {
-        const [pdsRes, agendaRes] = await Promise.all([
+        const [pdsRes, agendaRes, personalAgendaRes] = await Promise.all([
           fetch(`/api/pds/list?userId=${userId}`),
-          fetch("/api/admin/agenda"),
+          fetch("/api/agenda"),
+          fetch(`/api/agenda/personal?userId=${userId}`),
         ]);
 
-        const [pdsJson, agendaJson] = await Promise.all([pdsRes.json(), agendaRes.json()]);
+        const [pdsJson, agendaJson, personalAgendaJson] = await Promise.all([
+          pdsRes.json(),
+          agendaRes.json(),
+          personalAgendaRes.json(),
+        ]);
 
         if (pdsJson.success) {
           setPdsList(pdsJson.data || []);
         }
 
         if (agendaJson.success) {
-          setAgendaList(agendaJson.data || []);
+          const rows = (agendaJson.data || []) as AgendaItem[];
+          setPublicAgendaList(rows.map((item) => ({ ...item, source: "PUBLIC" })));
+        }
+
+        if (personalAgendaJson.success) {
+          const rows = (personalAgendaJson.data || []) as AgendaItem[];
+          setPersonalAgendaList(rows.map((item) => ({ ...item, source: "PERSONAL" })));
         }
       } catch (error) {
         console.error("Gagal memuat dashboard surveyor:", error);
@@ -193,16 +414,17 @@ export default function DashboardSurveyorPage() {
     const approved = pdsList.filter((item) => item.status === "APPROVED").length;
     const completed = pdsList.filter((item) => item.status === "COMPLETED").length;
 
-    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 0, 0, 0, 0);
-    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const agendaBulanIni = agendaList.filter((agenda) => {
+    const agendaBulanIni = calendarAgendaList.filter((agenda) => {
       const start = new Date(agenda.start);
       const end = new Date(agenda.end);
       return end >= monthStart && start <= monthEnd;
     }).length;
 
-    const agendaHariIni = agendaList.filter((agenda) =>
+    const agendaHariIni = calendarAgendaList.filter((agenda) =>
       isDateInRange(today, agenda.start, agenda.end)
     ).length;
 
@@ -228,7 +450,7 @@ export default function DashboardSurveyorPage() {
       jadwalVisit7Hari,
       uploadPending,
     };
-  }, [agendaList, pdsList, selectedDate]);
+  }, [calendarAgendaList, pdsList]);
 
   const chartData = useMemo(() => {
     const year = selectedDate.getFullYear();
@@ -276,7 +498,7 @@ export default function DashboardSurveyorPage() {
   const agendaDayMap = useMemo(() => {
     const map = new Set<string>();
 
-    agendaList.forEach((agenda) => {
+    calendarAgendaList.forEach((agenda) => {
       const start = toStartOfDay(agenda.start);
       const end = toStartOfDay(agenda.end);
       const cursor = new Date(start);
@@ -288,20 +510,20 @@ export default function DashboardSurveyorPage() {
     });
 
     return map;
-  }, [agendaList]);
+  }, [calendarAgendaList]);
 
   const agendaBulanTerpilih = useMemo(() => {
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 0, 0, 0, 0);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    return agendaList
+    return calendarAgendaList
       .filter((agenda) => {
         const start = new Date(agenda.start);
         const end = new Date(agenda.end);
         return end >= monthStart && start <= monthEnd;
       })
       .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  }, [agendaList, selectedDate]);
+  }, [calendarAgendaList, selectedDate]);
 
   const totalAgendaPages = Math.max(1, Math.ceil(agendaBulanTerpilih.length / AGENDA_PER_PAGE));
 
@@ -330,7 +552,7 @@ export default function DashboardSurveyorPage() {
       };
     });
 
-    const agendaActivities: ActivityItem[] = agendaList.map((agenda) => ({
+    const agendaActivities: ActivityItem[] = agendaActivityList.map((agenda) => ({
       id: `agenda-${agenda.id}`,
       title: `Agenda: ${agenda.title}`,
       subtitle: `${formatDateLabel(agenda.start)} - ${formatDateLabel(agenda.end)}`,
@@ -341,7 +563,7 @@ export default function DashboardSurveyorPage() {
     return [...pdsActivities, ...agendaActivities]
       .sort((a, b) => b.dateValue - a.dateValue)
       .slice(0, 8);
-  }, [agendaList, pdsList]);
+  }, [agendaActivityList, pdsList]);
 
   const keberangkatanMendatang = useMemo<DepartureItem[]>(() => {
     const today = toStartOfDay(new Date());
@@ -438,6 +660,13 @@ export default function DashboardSurveyorPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                onClick={() => openPersonalAgendaModal(selectedDate)}
+                className="rounded-lg bg-cyan-700 px-3 py-1.5 text-sm font-bold text-white hover:bg-cyan-800"
+              >
+                + Agenda Pribadi
+              </button>
+              <button
+                type="button"
                 onClick={() => handleMonthChange("prev")}
                 className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
               >
@@ -505,16 +734,48 @@ export default function DashboardSurveyorPage() {
               <div className="space-y-2">
                 {pagedAgendaBulanTerpilih.map((agenda) => (
                   <div key={agenda.id} className="rounded-xl border border-slate-200 bg-white p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-slate-900">{agenda.title}</p>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                        {agenda.category}
-                      </span>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-slate-900">{agenda.title}</p>
+                        <p className="mt-1 text-sm text-slate-600">{agenda.description || "-"}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                          {agenda.category}
+                        </span>
+                        {agenda.source === "PUBLIC" && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">UMUM</span>
+                        )}
+                        {agenda.source === "PERSONAL" && (
+                          <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-bold text-cyan-700">PRIBADI</span>
+                        )}
+                        {agenda.source === "PDS" && (
+                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">PDS</span>
+                        )}
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{agenda.description || "-"}</p>
                     <p className="mt-2 text-xs text-slate-500">
                       {formatDateLabel(agenda.start)} - {formatDateLabel(agenda.end)}
                     </p>
+                    {agenda.source === "PERSONAL" && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditPersonalAgenda(agenda)}
+                          className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePersonalAgenda(agenda.id)}
+                          disabled={deletingPersonalAgendaId === agenda.id}
+                          className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingPersonalAgendaId === agenda.id ? "Menghapus..." : "Hapus"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -544,7 +805,181 @@ export default function DashboardSurveyorPage() {
               </div>
             )}
           </div>
+
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-slate-700">Agenda PDS</p>
+                <p className="text-xs text-slate-500">Filter khusus agenda PDS surveyor</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={pdsAgendaStatusFilter}
+                  onChange={(e) => setPdsAgendaStatusFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="SUBMITTED">SUBMITTED</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                </select>
+                <input
+                  type="month"
+                  value={pdsAgendaMonth}
+                  onChange={(e) => setPdsAgendaMonth(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">Berangkat</th>
+                    <th className="px-3 py-2">Kembali</th>
+                    <th className="px-3 py-2">Lokasi</th>
+                    <th className="px-3 py-2">Keperluan</th>
+                    <th className="px-3 py-2 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pdsAgendaRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
+                        Tidak ada agenda PDS untuk filter ini.
+                      </td>
+                    </tr>
+                  ) : (
+                    pdsAgendaRows.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2">{formatDateLabel(item.tglBerangkat)}</td>
+                        <td className="px-3 py-2">{formatDateLabel(item.tglKembali)}</td>
+                        <td className="px-3 py-2 font-semibold text-slate-800">{item.lokasi || "-"}</td>
+                        <td className="px-3 py-2 text-slate-500">{item.keperluan || "-"}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              item.status === "PENDING"
+                                ? "bg-amber-100 text-amber-700"
+                                : item.status === "APPROVED"
+                                ? "bg-cyan-100 text-cyan-700"
+                                : item.status === "SUBMITTED"
+                                ? "bg-sky-100 text-sky-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
+
+        {isPersonalAgendaOpen && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center">
+            <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-cyan-100 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <h2 className="text-lg font-black text-slate-900 md:text-xl">
+                  {editingPersonalAgendaId ? "Edit Agenda Pribadi" : "Tambah Agenda Pribadi"}
+                </h2>
+                <button
+                  type="button"
+                  onClick={closePersonalAgendaModal}
+                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitPersonalAgenda} className="space-y-3 p-5 md:p-6">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-slate-600">Judul</label>
+                  <input
+                    type="text"
+                    value={personalAgendaForm.title}
+                    onChange={(e) => setPersonalAgendaForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-slate-600">Deskripsi</label>
+                  <textarea
+                    value={personalAgendaForm.description}
+                    onChange={(e) => setPersonalAgendaForm((prev) => ({ ...prev, description: e.target.value }))}
+                    className="min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-slate-600">Kategori</label>
+                  <select
+                    value={personalAgendaForm.category}
+                    onChange={(e) => setPersonalAgendaForm((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                  >
+                    <option value="RAPAT">Rapat</option>
+                    <option value="DINAS">Dinas</option>
+                    <option value="Familiarisasi Dokumen Teknik">Familiarisasi Dokumen Teknik</option>
+                    <option value="URGENT">Urgent</option>
+                    <option value="EVENT">Event</option>
+                    <option value="LAINNYA">Lainnya</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase text-slate-600">Tanggal Mulai</label>
+                    <input
+                      type="date"
+                      value={personalAgendaForm.start}
+                      onChange={(e) => setPersonalAgendaForm((prev) => ({ ...prev, start: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase text-slate-600">Tanggal Selesai</label>
+                    <input
+                      type="date"
+                      value={personalAgendaForm.end}
+                      onChange={(e) => setPersonalAgendaForm((prev) => ({ ...prev, end: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2 md:flex-row md:justify-end">
+                  <button
+                    type="button"
+                    onClick={closePersonalAgendaModal}
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPersonalAgenda}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {savingPersonalAgenda ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                    {savingPersonalAgenda ? "Menyimpan..." : editingPersonalAgendaId ? "Update Agenda" : "Simpan Agenda"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <section className="space-y-6">
           <article className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -591,6 +1026,8 @@ export default function DashboardSurveyorPage() {
                             ? "bg-amber-100 text-amber-700"
                             : item.status === "APPROVED"
                             ? "bg-cyan-100 text-cyan-700"
+                            : item.status === "SUBMITTED"
+                            ? "bg-sky-100 text-sky-700"
                             : "bg-emerald-100 text-emerald-700"
                         }`}
                       >

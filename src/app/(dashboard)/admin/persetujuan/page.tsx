@@ -48,6 +48,7 @@ import {
   Eye,
   FileText,
   Save,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
@@ -107,6 +108,7 @@ export default function AdminPersetujuanPDS() {
   const [verificationDecision, setVerificationDecision] = useState<BuktiStatus | ''>('');
   const [isAcceptedLocked, setIsAcceptedLocked] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [deletingPdsId, setDeletingPdsId] = useState<number | null>(null);
 
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
@@ -329,6 +331,34 @@ export default function AdminPersetujuanPDS() {
       await fetchAllPds({ force: true });
     } catch (err) {
       alert('Terjadi kesalahan jaringan.');
+    }
+  };
+
+  const handleDeletePds = async (id: number) => {
+    const ok = confirm('Yakin ingin menghapus PDS ini? Data bukti akan ikut terhapus.');
+    if (!ok) return;
+
+    setDeletingPdsId(id);
+    try {
+      const res = await fetch(`/api/admin/pds?id=${id}`, { method: 'DELETE' });
+      const result = await res.json();
+
+      if (!result.success) {
+        alert(result.error || 'Gagal menghapus PDS');
+        return;
+      }
+
+      if (selectedPds?.id === id) {
+        setSelectedPds(null);
+        setIsModalOpen(false);
+      }
+
+      await fetchAllPds({ force: true });
+    } catch (error) {
+      console.error('Gagal menghapus PDS:', error);
+      alert('Terjadi kesalahan saat menghapus PDS');
+    } finally {
+      setDeletingPdsId(null);
     }
   };
 
@@ -676,6 +706,14 @@ export default function AdminPersetujuanPDS() {
                               <Edit size={18} />
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDeletePds(data.id)}
+                            disabled={deletingPdsId === data.id}
+                            className="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                            title="Hapus PDS"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>

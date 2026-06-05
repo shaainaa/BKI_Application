@@ -33,7 +33,12 @@ const Agenda = sequelize.define('Agenda', {
     type: DataTypes.STRING,
     allowNull: true, // Opsional jika agenda tidak pakai lampiran
   },
-  createdBy: { type: DataTypes.INTEGER }
+  createdBy: { type: DataTypes.INTEGER },
+  isPublic: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  }
 }, {
   tableName: 'agendas',
   timestamps: true
