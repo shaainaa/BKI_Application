@@ -7,6 +7,7 @@ import {
   uploadManyToUploadThing,
   uploadOneToUploadThing,
 } from '@/lib/uploadthing';
+import { requireAdmin } from '@/lib/session';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 let agendaSchemaReady: Promise<void> | null = null;
@@ -22,6 +23,9 @@ function ensureAgendaSchema() {
 
 export async function POST(req: NextRequest) {
   try {
+    const { auth, response } = await requireAdmin(req);
+    if (response || !auth) return response;
+
     await ensureAgendaSchema();
 
     const formData = await req.formData();
@@ -31,7 +35,6 @@ export async function POST(req: NextRequest) {
     const end = formData.get('end') as string;
     const category = formData.get('category') as string;
     const isPublicRaw = formData.get('isPublic') as string | null;
-    const createdByRaw = formData.get('createdBy') as string;
     const fileSurat = formData.get('fileSurat') as File | null;
     const lampiranFiles = formData.getAll('lampiranFiles').filter((item): item is File => item instanceof File);
 
@@ -62,15 +65,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const createdBy = Number(createdByRaw);
-
     const agenda = await Agenda.create({
       title, description, start, end, category,
       isPublic: isPublicRaw === 'true',
       suratFileUrl,
       suratNamaFile: fileSurat.name,
       fileUrl: suratFileUrl,
-      createdBy: Number.isFinite(createdBy) ? createdBy : null,
+      createdBy: auth.user.id,
     });
 
     const agendaId = Number(agenda.getDataValue('id'));
@@ -94,6 +95,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     await ensureAgendaSchema();
 
     const idRaw = req.nextUrl.searchParams.get('id');
@@ -194,6 +198,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     await ensureAgendaSchema();
 
     const idRaw = req.nextUrl.searchParams.get('id');
@@ -231,8 +238,11 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     await ensureAgendaSchema();
 
     const data = await Agenda.findAll({

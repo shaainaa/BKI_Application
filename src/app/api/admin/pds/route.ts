@@ -3,6 +3,19 @@ import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
 import { deleteUploadThingByUrl } from '@/lib/uploadthing';
+import { requireAdmin } from '@/lib/session';
+
+type UpdateValue = unknown;
+
+type BuktiUpdate = {
+  id?: number;
+  verificationStatus?: string;
+  verifiedBy?: string | null;
+};
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Terjadi kesalahan server.';
+}
 
 // --- SOLUSI AMPUH: PAKSA RELASI SETIAP KALI API DIPANGGIL ---
 function applyAssociations() {
@@ -14,8 +27,11 @@ function applyAssociations() {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     // Panggil fungsi relasi dulu
     applyAssociations();
 
@@ -37,15 +53,19 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data: allPds });
-  } catch (error: any) {
-    console.error("Error Get Admin PDS:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = errorMessage(error);
+    console.error("Error Get Admin PDS:", message);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json();
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
+    const body = await req.json() as Record<string, unknown>;
     const {
       id,
       status,
@@ -72,7 +92,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'ID PDS wajib diisi' }, { status: 400 });
     }
 
-    const updatePayload: Record<string, any> = {};
+    const updatePayload: Record<string, UpdateValue> = {};
 
     if (typeof status !== 'undefined') updatePayload.status = status;
     if (typeof nominal !== 'undefined') updatePayload.nominalPDS = nominal;
@@ -107,7 +127,8 @@ export async function PATCH(req: NextRequest) {
       const acceptedLocked =
         currentStatuses.length > 0 && currentStatuses.every((status) => status === 'DITERIMA');
 
-      const wantsReject = buktiUpdates.some((bukti: any) => bukti?.verificationStatus === 'DIREJECT');
+      const updates = buktiUpdates as BuktiUpdate[];
+      const wantsReject = updates.some((bukti) => bukti?.verificationStatus === 'DIREJECT');
       if (acceptedLocked && wantsReject) {
         return NextResponse.json(
           { success: false, error: 'Bukti yang sudah DITERIMA tidak bisa diubah menjadi DIREJECT' },
@@ -115,10 +136,10 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
-      for (const bukti of buktiUpdates) {
+      for (const bukti of updates) {
         if (!bukti?.id) continue;
 
-        const payload: Record<string, any> = {};
+        const payload: Record<string, UpdateValue> = {};
         if (typeof bukti.verificationStatus !== 'undefined') {
           payload.verificationStatus = bukti.verificationStatus;
           payload.verifiedAt = bukti.verificationStatus === 'PENDING' ? null : new Date();
@@ -142,13 +163,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: errorMessage(error) }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     const idRaw = req.nextUrl.searchParams.get('id');
     const id = Number(idRaw);
 
@@ -183,7 +207,7 @@ export async function DELETE(req: NextRequest) {
     await pds.destroy();
 
     return NextResponse.json({ success: true, message: 'PDS berhasil dihapus' });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: errorMessage(error) }, { status: 500 });
   }
 }

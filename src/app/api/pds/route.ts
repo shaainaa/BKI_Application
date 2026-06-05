@@ -2,17 +2,21 @@
     import { Op } from 'sequelize';
     import  Pds  from '@/models/Pds';
     import { uploadOneToUploadThing } from '@/lib/uploadthing';
+    import { requireAuth } from '@/lib/session';
 
     export async function POST(req: NextRequest) {
         try {
+            const { auth, response } = await requireAuth(req);
+            if (response || !auth) return response;
+
             const data = await req.formData();
-            const userId = Number(data.get('userId'));
+            const userId = auth.user.id;
             const tglBerangkat = data.get('tglBerangkat') as string;
             const tglKembali = data.get('tglKembali') as string;
 
-            if (!userId || !tglBerangkat || !tglKembali) {
+            if (!tglBerangkat || !tglKembali) {
                 return NextResponse.json(
-                    { success: false, message: 'userId, tglBerangkat, dan tglKembali wajib diisi' },
+                    { success: false, message: 'tglBerangkat dan tglKembali wajib diisi' },
                     { status: 400 }
                 );
             }

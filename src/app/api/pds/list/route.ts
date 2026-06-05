@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
+import { requireAuth } from '@/lib/session';
 
 // GUNAKAN PENGECEKAN INI AGAR TIDAK DOUBLE ALIAS
 if (!Pds.associations.user) {
@@ -13,15 +14,13 @@ if (!Pds.associations.bukti) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const status = (searchParams.get('status') || '').toUpperCase();
-    
-    if (!userId) {
-        return NextResponse.json({ success: false, message: 'Unauthorized'}, { status: 401});
-    }
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
 
-    const whereClause: Record<string, any> = { userId };
+    const { searchParams } = new URL(req.url);
+    const status = (searchParams.get('status') || '').toUpperCase();
+
+    const whereClause: Record<string, string | number> = { userId: auth.user.id };
     if (status) {
       whereClause.status = status;
     }
@@ -44,8 +43,9 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: listPds });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching PDS with User:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

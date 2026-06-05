@@ -14,22 +14,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const userRaw = localStorage.getItem('user');
-    const user = JSON.parse(userRaw || '{}');
-    
-    if (!user.id) {
-      router.push('/login');
-    } else if (pathname.startsWith('/admin') && user.role !== 'ADMIN') {
-      alert("Akses Ditolak! Anda bukan Admin.");
-      router.push('/pds/permohonan');
-    } else {
-      setUserRole(user.role); // Simpan role ke state
-      setAuthorized(true);
+    let active = true;
+
+    async function verifySession() {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        const data = await res.json();
+
+        if (!active) return;
+
+        if (!res.ok || !data?.success || !data?.user?.id) {
+          localStorage.removeItem('user');
+          setAuthorized(false);
+          router.push('/login');
+          return;
+        }
+
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        if (pathname.startsWith('/admin') && data.user.role !== 'ADMIN') {
+          alert("Akses Ditolak! Anda bukan Admin.");
+          setAuthorized(false);
+          router.push('/pds/permohonan');
+          return;
+        }
+
+        setUserRole(data.user.role);
+        setAuthorized(true);
+      } catch {
+        if (!active) return;
+        localStorage.removeItem('user');
+        setAuthorized(false);
+        router.push('/login');
+      }
     }
+
+    verifySession();
+
+    return () => {
+      active = false;
+    };
   }, [pathname, router]);
 
   useEffect(() => {
-    setIsMobileSidebarOpen(false);
+    const frame = window.requestAnimationFrame(() => {
+      setIsMobileSidebarOpen(false);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
   if (!authorized) return null;

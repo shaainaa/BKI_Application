@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Agenda from '@/models/Agenda';
 import AgendaLampiran from '@/models/AgendaLampiran';
+import { requireAuth } from '@/lib/session';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { response } = await requireAuth(req);
+    if (response) return response;
+
     const data = await Agenda.findAll({
       where: { isPublic: true },
       include: [

@@ -2,6 +2,12 @@ import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { hashPassword, isBcryptHash, verifyPassword } from '@/lib/password';
 import { missingDbEnvs } from '@/lib/db';
+import {
+  createSession,
+  getSessionCookieOptions,
+  SESSION_COOKIE_NAME,
+  toAuthUser,
+} from '@/lib/session';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -45,20 +51,15 @@ export async function POST(req: Request) {
         await user.save();
       }
 
-      return NextResponse.json({ 
+      const authUser = toAuthUser(user);
+      const { sessionId } = await createSession(authUser.id);
+      const response = NextResponse.json({
         success: true, 
-        user: {
-          id: user.getDataValue('id'),
-          nama: user.getDataValue('nama'),
-          email: user.getDataValue('email'),
-          username: user.getDataValue('username'),
-          noTelp: user.getDataValue('noTelp'),
-          jenisBank: user.getDataValue('jenisBank'),
-          noRekening: user.getDataValue('noRekening'),
-          jabatanSurveyor: user.getDataValue('jabatanSurveyor'),
-          role: user.getDataValue('role') // Kirimkan role (ADMIN/SURVEYOR) ke frontend
-        } 
+        user: authUser,
       });
+      response.cookies.set(SESSION_COOKIE_NAME, sessionId, getSessionCookieOptions());
+
+      return response;
     }
     return loginErrorResponse(401, 'Username atau password salah.');
   } catch (error: unknown) {

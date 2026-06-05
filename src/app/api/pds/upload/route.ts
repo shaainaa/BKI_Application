@@ -3,9 +3,13 @@ import { NextResponse } from 'next/server';
 import BuktiPds from '@/models/BuktiPDS'; 
 import Pds from '@/models/Pds';
 import { deleteUploadThingByUrl, uploadOneToUploadThing } from '@/lib/uploadthing';
+import { requireAuth } from '@/lib/session';
 
 export async function POST(request: Request) {
   try {
+    const { auth, response } = await requireAuth(request);
+    if (response || !auth) return response;
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const pdsId = formData.get('pdsId') as string;
@@ -26,6 +30,10 @@ export async function POST(request: Request) {
     const pds = await Pds.findByPk(parsedPdsId);
     if (!pds) {
       return NextResponse.json({ success: false, message: 'Data PDS tidak ditemukan' }, { status: 404 });
+    }
+
+    if (Number(pds.get('userId')) !== auth.user.id && auth.user.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, message: 'Tidak memiliki akses.' }, { status: 403 });
     }
 
     const pdsStatus = (pds.get('status') as string) || '';
@@ -90,6 +98,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const { auth, response } = await requireAuth(request);
+    if (response || !auth) return response;
+
     const body = await request.json();
     const pdsId = Number(body?.pdsId);
 
@@ -100,6 +111,10 @@ export async function PATCH(request: Request) {
     const pds = await Pds.findByPk(pdsId);
     if (!pds) {
       return NextResponse.json({ success: false, message: 'Data PDS tidak ditemukan' }, { status: 404 });
+    }
+
+    if (Number(pds.get('userId')) !== auth.user.id && auth.user.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, message: 'Tidak memiliki akses.' }, { status: 403 });
     }
 
     const pdsStatus = (pds.get('status') as string) || '';

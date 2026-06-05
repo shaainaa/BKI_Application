@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
 import User from '@/models/User';
 import { hashPassword, verifyPassword } from '@/lib/password';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = Number(req.nextUrl.searchParams.get('userId'));
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
 
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'userId wajib diisi.' }, { status: 400 });
-    }
-
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(auth.user.id);
     if (!user) {
       return NextResponse.json({ success: false, error: 'User tidak ditemukan.' }, { status: 404 });
     }
@@ -38,9 +36,11 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
+
     const body = await req.json();
     const {
-      userId,
       nama,
       username,
       noTelp,
@@ -51,10 +51,7 @@ export async function PATCH(req: NextRequest) {
       newPassword,
     } = body;
 
-    const id = Number(userId);
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'userId wajib diisi.' }, { status: 400 });
-    }
+    const id = auth.user.id;
 
     const user = await User.findByPk(id);
     if (!user) {

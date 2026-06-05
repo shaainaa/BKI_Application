@@ -19,7 +19,13 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   });
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Tetap keluarkan user dari browser meski request logout gagal.
+    }
+
     localStorage.removeItem('user');
     router.push('/login');
   };

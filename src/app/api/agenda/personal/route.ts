@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Agenda from '@/models/Agenda';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(req: NextRequest) {
   try {
-    const userIdRaw = req.nextUrl.searchParams.get('userId');
-    const userId = Number(userIdRaw);
-
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ success: false, message: 'userId tidak valid.' }, { status: 400 });
-    }
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
 
     const data = await Agenda.findAll({
-      where: { createdBy: userId, isPublic: false },
+      where: { createdBy: auth.user.id, isPublic: false },
       order: [['start', 'ASC']],
     });
 
@@ -24,12 +21,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const userId = Number(body?.userId);
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
 
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ success: false, message: 'userId tidak valid.' }, { status: 400 });
-    }
+    const body = await req.json();
 
     const title = (body?.title as string) || '';
     const description = (body?.description as string) || '';
@@ -47,7 +42,7 @@ export async function POST(req: NextRequest) {
       start,
       end,
       category,
-      createdBy: userId,
+      createdBy: auth.user.id,
       isPublic: false,
       suratFileUrl: null,
       suratNamaFile: null,
@@ -64,6 +59,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
+
     const idRaw = req.nextUrl.searchParams.get('id');
     const id = Number(idRaw);
 
@@ -72,18 +70,13 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const userId = Number(body?.userId);
-
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ success: false, message: 'userId tidak valid.' }, { status: 400 });
-    }
 
     const agenda = await Agenda.findByPk(id);
     if (!agenda) {
       return NextResponse.json({ success: false, message: 'Agenda tidak ditemukan.' }, { status: 404 });
     }
 
-    if (agenda.get('createdBy') !== userId) {
+    if (agenda.get('createdBy') !== auth.user.id) {
       return NextResponse.json({ success: false, message: 'Tidak memiliki akses.' }, { status: 403 });
     }
 
@@ -114,17 +107,14 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const { auth, response } = await requireAuth(req);
+    if (response || !auth) return response;
+
     const idRaw = req.nextUrl.searchParams.get('id');
-    const userIdRaw = req.nextUrl.searchParams.get('userId');
     const id = Number(idRaw);
-    const userId = Number(userIdRaw);
 
     if (!Number.isFinite(id) || id <= 0) {
       return NextResponse.json({ success: false, message: 'ID agenda tidak valid.' }, { status: 400 });
-    }
-
-    if (!Number.isFinite(userId) || userId <= 0) {
-      return NextResponse.json({ success: false, message: 'userId tidak valid.' }, { status: 400 });
     }
 
     const agenda = await Agenda.findByPk(id);
@@ -132,7 +122,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Agenda tidak ditemukan.' }, { status: 404 });
     }
 
-    if (agenda.get('createdBy') !== userId) {
+    if (agenda.get('createdBy') !== auth.user.id) {
       return NextResponse.json({ success: false, message: 'Tidak memiliki akses.' }, { status: 403 });
     }
 

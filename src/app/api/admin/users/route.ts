@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
 import User from '@/models/User';
 import { hashPassword } from '@/lib/password';
+import { requireAdmin } from '@/lib/session';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     const users = await User.findAll({
       where: { role: 'SURVEYOR' },
       attributes: ['id', 'nama', 'email', 'username', 'jabatanSurveyor', 'noTelp', 'jenisBank', 'noRekening', 'role'],
@@ -20,6 +24,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     const body = await req.json();
     const {
       nama,
@@ -97,6 +104,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     const body = await req.json();
     const {
       id,
@@ -190,6 +200,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const { response } = await requireAdmin(req);
+    if (response) return response;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
