@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FormEvent, useEffect, useState } from "react";
-import { Loader2, RefreshCcw, ShieldPlus, UserRound } from "lucide-react";
+import { Edit2, Loader2, RefreshCcw, ShieldPlus, Trash2, UserRound, X } from "lucide-react";
 
 type SurveyorUser = {
 	id: number;
@@ -42,6 +42,10 @@ export default function AdminPenggunaPage() {
 	const [form, setForm] = useState<FormState>(initialForm);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
+	const [editingUser, setEditingUser] = useState<SurveyorUser | null>(null);
+	const [editForm, setEditForm] = useState<FormState>(initialForm);
+	const [updating, setUpdating] = useState(false);
+	const [deletingId, setDeletingId] = useState<number | null>(null);
 	const [message, setMessage] = useState<string>("");
 	const [error, setError] = useState<string>("");
 
@@ -72,6 +76,31 @@ export default function AdminPenggunaPage() {
 
 	const onChangeInput = (key: keyof FormState, value: string) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
+	};
+
+	const onChangeEditInput = (key: keyof FormState, value: string) => {
+		setEditForm((prev) => ({ ...prev, [key]: value }));
+	};
+
+	const openEditModal = (user: SurveyorUser) => {
+		setMessage("");
+		setError("");
+		setEditingUser(user);
+		setEditForm({
+			nama: user.nama || "",
+			email: user.email || "",
+			username: user.username || "",
+			password: "",
+			jabatanSurveyor: user.jabatanSurveyor || "",
+			noTelp: user.noTelp || "",
+			jenisBank: user.jenisBank || "",
+			noRekening: user.noRekening || "",
+		});
+	};
+
+	const closeEditModal = () => {
+		setEditingUser(null);
+		setEditForm(initialForm);
 	};
 
 	const validateForm = () => {
@@ -125,6 +154,92 @@ export default function AdminPenggunaPage() {
 			setError(msg);
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	const validateEditForm = () => {
+		if (!editForm.nama.trim()) return "Nama wajib diisi.";
+		if (!editForm.email.trim()) return "Email wajib diisi.";
+		if (!editForm.username.trim()) return "Username wajib diisi.";
+		if (editForm.password.trim() && editForm.password.trim().length < 6) return "Password baru minimal 6 karakter.";
+		return "";
+	};
+
+	const handleUpdate = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!editingUser) {
+			return;
+		}
+
+		setMessage("");
+		setError("");
+
+		const formError = validateEditForm();
+		if (formError) {
+			setError(formError);
+			return;
+		}
+
+		setUpdating(true);
+
+		try {
+			const res = await fetch("/api/admin/users", {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					id: editingUser.id,
+					nama: editForm.nama.trim(),
+					email: editForm.email.trim(),
+					username: editForm.username.trim(),
+					password: editForm.password.trim(),
+					jabatanSurveyor: editForm.jabatanSurveyor.trim(),
+					noTelp: editForm.noTelp.trim(),
+					jenisBank: editForm.jenisBank.trim(),
+					noRekening: editForm.noRekening.trim(),
+				}),
+			});
+
+			const result = await res.json();
+			if (!res.ok || !result.success) {
+				throw new Error(result.error || "Gagal memperbarui akun surveyor.");
+			}
+
+			setMessage(editForm.password.trim() ? "Data dan password surveyor berhasil diperbarui." : "Data surveyor berhasil diperbarui.");
+			closeEditModal();
+			await fetchSurveyorUsers();
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat memperbarui akun.";
+			setError(msg);
+		} finally {
+			setUpdating(false);
+		}
+	};
+
+	const handleDelete = async (user: SurveyorUser) => {
+		const confirmed = window.confirm(`Hapus akun surveyor "${user.nama}"?`);
+		if (!confirmed) {
+			return;
+		}
+
+		setMessage("");
+		setError("");
+		setDeletingId(user.id);
+
+		try {
+			const res = await fetch(`/api/admin/users?id=${user.id}`, { method: "DELETE" });
+			const result = await res.json();
+
+			if (!res.ok || !result.success) {
+				throw new Error(result.error || "Gagal menghapus akun surveyor.");
+			}
+
+			setMessage("Akun surveyor berhasil dihapus.");
+			await fetchSurveyorUsers();
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus akun.";
+			setError(msg);
+		} finally {
+			setDeletingId(null);
 		}
 	};
 
@@ -273,13 +388,14 @@ export default function AdminPenggunaPage() {
 									<th className="px-4 py-3">Username</th>
 									<th className="px-4 py-3">Jabatan</th>
 									<th className="px-4 py-3">No. Telp</th>
-									<th className="rounded-r-xl px-4 py-3">Bank / Rekening</th>
+									<th className="px-4 py-3">Bank / Rekening</th>
+									<th className="rounded-r-xl px-4 py-3 text-right">Aksi</th>
 								</tr>
 							</thead>
 							<tbody>
 								{loading ? (
 									<tr>
-										<td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+										<td colSpan={7} className="px-4 py-10 text-center text-gray-400">
 											<span className="inline-flex items-center gap-2">
 												<Loader2 className="animate-spin" size={16} />
 												Memuat data pengguna...
@@ -288,7 +404,7 @@ export default function AdminPenggunaPage() {
 									</tr>
 								) : users.length === 0 ? (
 									<tr>
-										<td colSpan={6} className="px-4 py-10 text-center text-gray-400">Belum ada akun surveyor.</td>
+										<td colSpan={7} className="px-4 py-10 text-center text-gray-400">Belum ada akun surveyor.</td>
 									</tr>
 								) : (
 									users.map((user) => (
@@ -299,6 +415,27 @@ export default function AdminPenggunaPage() {
 											<td className="px-4 py-3">{user.jabatanSurveyor || "-"}</td>
 											<td className="px-4 py-3">{user.noTelp || "-"}</td>
 											<td className="px-4 py-3">{user.jenisBank || user.noRekening ? `${user.jenisBank || "-"} / ${user.noRekening || "-"}` : "-"}</td>
+											<td className="px-4 py-3">
+												<div className="flex justify-end gap-2">
+													<button
+														type="button"
+														onClick={() => openEditModal(user)}
+														className="inline-flex items-center gap-1 rounded-lg border border-teal-200 px-3 py-2 text-xs font-semibold text-[#0A8E9A] transition hover:bg-teal-50"
+													>
+														<Edit2 size={14} />
+														Edit
+													</button>
+													<button
+														type="button"
+														onClick={() => handleDelete(user)}
+														disabled={deletingId === user.id}
+														className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+													>
+														{deletingId === user.id ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+														Hapus
+													</button>
+												</div>
+											</td>
 										</tr>
 									))
 								)}
@@ -307,6 +444,122 @@ export default function AdminPenggunaPage() {
 					</div>
 				</div>
 			</section>
+
+			{editingUser ? (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+					<div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+						<div className="mb-5 flex items-start justify-between gap-4">
+							<div>
+								<h2 className="text-xl font-bold text-[#202c45]">Edit Akun Surveyor</h2>
+								<p className="mt-1 text-sm text-gray-500">Kosongkan password jika tidak ingin menggantinya.</p>
+							</div>
+							<button
+								type="button"
+								onClick={closeEditModal}
+								className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+							>
+								<X size={20} />
+							</button>
+						</div>
+
+						<form onSubmit={handleUpdate} className="space-y-4">
+							<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Nama Lengkap</span>
+									<input
+										type="text"
+										value={editForm.nama}
+										onChange={(e) => onChangeEditInput("nama", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Email</span>
+									<input
+										type="email"
+										value={editForm.email}
+										onChange={(e) => onChangeEditInput("email", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Username</span>
+									<input
+										type="text"
+										value={editForm.username}
+										onChange={(e) => onChangeEditInput("username", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Password Baru</span>
+									<input
+										type="password"
+										placeholder="Minimal 6 karakter"
+										value={editForm.password}
+										onChange={(e) => onChangeEditInput("password", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Jabatan Surveyor</span>
+									<input
+										type="text"
+										value={editForm.jabatanSurveyor}
+										onChange={(e) => onChangeEditInput("jabatanSurveyor", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Nomor Telepon</span>
+									<input
+										type="text"
+										value={editForm.noTelp}
+										onChange={(e) => onChangeEditInput("noTelp", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Jenis Bank</span>
+									<input
+										type="text"
+										value={editForm.jenisBank}
+										onChange={(e) => onChangeEditInput("jenisBank", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+								<label className="block space-y-1">
+									<span className="text-xs font-semibold text-gray-600">Nomor Rekening</span>
+									<input
+										type="text"
+										value={editForm.noRekening}
+										onChange={(e) => onChangeEditInput("noRekening", e.target.value)}
+										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+									/>
+								</label>
+							</div>
+
+							<div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+								<button
+									type="button"
+									onClick={closeEditModal}
+									className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+								>
+									Batal
+								</button>
+								<button
+									type="submit"
+									disabled={updating}
+									className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A8E9A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#087985] disabled:cursor-not-allowed disabled:opacity-70"
+								>
+									{updating ? <Loader2 className="animate-spin" size={16} /> : null}
+									{updating ? "Menyimpan..." : "Simpan Perubahan"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 }

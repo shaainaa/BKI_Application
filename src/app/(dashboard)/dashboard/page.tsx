@@ -663,7 +663,7 @@ export default function DashboardSurveyorPage() {
                 onClick={() => openPersonalAgendaModal(selectedDate)}
                 className="rounded-lg bg-cyan-700 px-3 py-1.5 text-sm font-bold text-white hover:bg-cyan-800"
               >
-                + Agenda Pribadi
+                + Agenda
               </button>
               <button
                 type="button"
