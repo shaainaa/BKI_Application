@@ -170,7 +170,7 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
 
             {/* Keperluan (Otomatis Capslock) */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-gray-800">Keperluan</label>
+              <label className="text-sm font-bold text-gray-800">Keperluan / Nama Objek</label>
               <input 
                 type="text" name="keperluan" value={formData.keperluan} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 uppercase"

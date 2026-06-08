@@ -611,7 +611,7 @@ export default function DashboardSurveyorPage() {
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-700 md:text-sm">
           <CalendarDays size={16} />
-          Kalender agenda aktif sebagai fitur utama
+          Kalender kegiatan aktif sebagai fitur utama
         </div>
       </div>
 
@@ -633,7 +633,7 @@ export default function DashboardSurveyorPage() {
           <p className="mt-2 text-3xl font-black text-emerald-900">{kpi.completed}</p>
         </article>
         <article className="rounded-2xl border border-violet-200 bg-violet-50 p-4 shadow-sm">
-          <p className="text-xs font-semibold text-violet-800">Agenda Bulan Ini</p>
+          <p className="text-xs font-semibold text-violet-800">Kegiatan Bulan Ini</p>
           <p className="mt-2 text-3xl font-black text-violet-900">{kpi.agendaBulanIni}</p>
         </article>
         <article className="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
