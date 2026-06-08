@@ -69,6 +69,7 @@ const DEFAULT_FILTERS = {
   tanggalMulai: '',
   tanggalAkhir: '',
   keperluan: '',
+  noAgenda: '',
   status: '',
   verifikasiBukti: '',
 };
@@ -214,6 +215,7 @@ export default function AdminPersetujuanPDS() {
       const lokasi = (item.lokasi || '').toLowerCase();
       const permohonan = (item.permohonan || '').toLowerCase();
       const keperluan = (item.keperluan || '').toLowerCase();
+      const noAgenda = (item.noAgenda || '').toLowerCase();
       const status = (item.status || '').toUpperCase();
       const itemDate = formatDateInput(item.tanggalPengajuan || '');
       const itemYear = itemDate ? itemDate.slice(0, 4) : '';
@@ -233,6 +235,7 @@ export default function AdminPersetujuanPDS() {
       const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
       const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
       const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+      const matchNoAgenda = !filters.noAgenda || noAgenda.includes(filters.noAgenda.toLowerCase());
       const matchStatus = !filters.status || status === filters.status;
       const matchVerifikasiBukti = !filters.verifikasiBukti || verifikasiKey === filters.verifikasiBukti;
 
@@ -244,6 +247,7 @@ export default function AdminPersetujuanPDS() {
         matchTanggalMulai &&
         matchTanggalAkhir &&
         matchKeperluan &&
+        matchNoAgenda &&
         matchStatus &&
         matchVerifikasiBukti
       );
@@ -593,6 +597,16 @@ export default function AdminPersetujuanPDS() {
                   value={filters.tanggalAkhir}
                   onChange={(e) => setFilters((prev) => ({ ...prev, tanggalAkhir: e.target.value }))}
                   className="h-10 w-full border border-gray-300 rounded-xl px-3 text-gray-600 text-sm outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">No. Agenda</label>
+                <input
+                  type="text"
+                  value={filters.noAgenda}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, noAgenda: e.target.value }))}
+                  placeholder="Cari No. Agenda"
+                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
                 />
               </div>
               <div>

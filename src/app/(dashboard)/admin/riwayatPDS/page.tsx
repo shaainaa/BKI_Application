@@ -13,6 +13,8 @@ const DEFAULT_FILTERS = {
 	tanggalMulai: '',
 	tanggalAkhir: '',
 	keperluan: '',
+	noAgenda: '',
+	so: '',
 	statusPembayaran: '',
 	tanggalPembayaran: '',
 };
@@ -21,6 +23,8 @@ export default function AdminRiwayatPDSPage() {
 	const [listPds, setListPds] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [previewData, setPreviewData] = useState<any>(null);
+	const [paymentTarget, setPaymentTarget] = useState<any>(null);
+	const [paymentDate, setPaymentDate] = useState('');
 	const [processingPaymentId, setProcessingPaymentId] = useState<number | null>(null);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
@@ -90,6 +94,8 @@ export default function AdminRiwayatPDSPage() {
 			const lokasi = (item.lokasi || '').toLowerCase();
 			const permohonan = (item.permohonan || '').toLowerCase();
 			const keperluan = (item.keperluan || '').toLowerCase();
+			const noAgenda = (item.noAgenda || '').toLowerCase();
+			const so = (item.so || '').toLowerCase();
 			const itemDate = formatDateInput(item.tanggalPengajuan);
 			const itemPaymentDate = formatDateInput(item.tanggalPembayaran);
 			const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
@@ -102,6 +108,8 @@ export default function AdminRiwayatPDSPage() {
 			const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
 			const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
 			const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+			const matchNoAgenda = !filters.noAgenda || noAgenda.includes(filters.noAgenda.toLowerCase());
+			const matchSo = !filters.so || so.includes(filters.so.toLowerCase());
 			const matchStatusPembayaran = !filters.statusPembayaran || paymentStatus === filters.statusPembayaran;
 			const matchTanggalPembayaran = !filters.tanggalPembayaran || itemPaymentDate === filters.tanggalPembayaran;
 
@@ -113,6 +121,8 @@ export default function AdminRiwayatPDSPage() {
 				matchTanggalMulai &&
 				matchTanggalAkhir &&
 				matchKeperluan &&
+				matchNoAgenda &&
+				matchSo &&
 				matchStatusPembayaran &&
 				matchTanggalPembayaran
 			);
@@ -146,19 +156,33 @@ export default function AdminRiwayatPDSPage() {
 		}).format(value);
 	};
 
-	const handleMarkAsPaid = async (id: number) => {
-		if (!confirm('Konfirmasi transfer pembayaran untuk data ini?')) return;
+	const openPaymentModal = (item: any) => {
+		setPaymentTarget(item);
+		setPaymentDate(formatDateInput(item.tanggalPembayaran));
+	};
 
-		setProcessingPaymentId(id);
+	const closePaymentModal = () => {
+		setPaymentTarget(null);
+		setPaymentDate('');
+	};
+
+	const handleMarkAsPaid = async () => {
+		if (!paymentTarget?.id) return;
+		if (!paymentDate) {
+			alert('Tanggal pembayaran wajib diisi.');
+			return;
+		}
+
+		setProcessingPaymentId(paymentTarget.id);
 		try {
-			const nowIso = new Date().toISOString();
+			const paymentIso = new Date(`${paymentDate}T00:00:00`).toISOString();
 			const res = await fetch('/api/admin/pds', {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					id,
+					id: paymentTarget.id,
 					statusPembayaran: 'SUDAH_DIBAYAR',
-					tanggalPembayaran: nowIso,
+					tanggalPembayaran: paymentIso,
 				}),
 			});
 
@@ -170,11 +194,12 @@ export default function AdminRiwayatPDSPage() {
 
 			setListPds((prev) =>
 				prev.map((item) =>
-					item.id === id
-						? { ...item, statusPembayaran: 'SUDAH_DIBAYAR', tanggalPembayaran: nowIso }
+					item.id === paymentTarget.id
+						? { ...item, statusPembayaran: 'SUDAH_DIBAYAR', tanggalPembayaran: paymentIso }
 						: item
 				)
 			);
+			closePaymentModal();
 			alert('Status pembayaran berhasil diubah menjadi Sudah Dibayar.');
 		} catch (err) {
 			alert('Terjadi kesalahan jaringan saat update pembayaran.');
@@ -331,8 +356,11 @@ export default function AdminRiwayatPDSPage() {
 							</button>
 						</div>
 					</div>
-					<div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
-						<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+					<div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner">
+						<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+							<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+								<p className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Data PDS</p>
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
 								<select
@@ -398,6 +426,31 @@ export default function AdminRiwayatPDSPage() {
 									))}
 								</select>
 							</div>
+								</div>
+							</div>
+							<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+								<p className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Administrasi</p>
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+							<div>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">No. Agenda</label>
+								<input
+									type="text"
+									value={filters.noAgenda}
+									onChange={(e) => setFilters((prev) => ({ ...prev, noAgenda: e.target.value }))}
+									placeholder="Cari No. Agenda"
+									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+								/>
+							</div>
+							<div>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">No. SO</label>
+								<input
+									type="text"
+									value={filters.so}
+									onChange={(e) => setFilters((prev) => ({ ...prev, so: e.target.value }))}
+									placeholder="Cari No. SO"
+									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+								/>
+							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Status Pembayaran</label>
 								<select
@@ -410,6 +463,11 @@ export default function AdminRiwayatPDSPage() {
 									<option value="SUDAH_DIBAYAR">Sudah Dibayar</option>
 								</select>
 							</div>
+								</div>
+							</div>
+							<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+								<p className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Tanggal</p>
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Mulai</label>
 								<input
@@ -437,6 +495,8 @@ export default function AdminRiwayatPDSPage() {
 									className="h-10 w-full border border-gray-300 rounded-xl px-3 text-gray-600 text-sm outline-none focus:border-teal-500"
 								/>
 							</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -450,6 +510,8 @@ export default function AdminRiwayatPDSPage() {
 								<th className="py-4 px-6 text-center">Tanggal</th>
 								<th className="py-4 px-6 text-center">Jenis</th>
 								<th className="py-4 px-6">Keperluan</th>
+								<th className="py-4 px-6 text-center">No. Agenda</th>
+								<th className="py-4 px-6 text-center">No. SO</th>
 								<th className="py-4 px-6 text-center">Status</th>
 								<th className="py-4 px-6 text-center">Status Pembayaran</th>
 								<th className="py-4 px-6 text-center">Tanggal Pembayaran</th>
@@ -458,9 +520,9 @@ export default function AdminRiwayatPDSPage() {
 						</thead>
 						<tbody className="divide-y divide-gray-100">
 							{loading ? (
-								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
+								<tr><td colSpan={11} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
 							) : pagedPds.length === 0 ? (
-								<tr><td colSpan={9} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
+								<tr><td colSpan={11} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
 							) : (
 								pagedPds.map((data: any) => (
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
@@ -469,6 +531,8 @@ export default function AdminRiwayatPDSPage() {
 										<td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
 										<td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
 										<td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
+										<td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>
+										<td className="py-4 px-6 text-center font-semibold text-gray-700">{data.so || '-'}</td>
 										<td className="py-4 px-6 text-center">
 											<span className="px-6 py-1 rounded-full text-[10px] font-black tracking-widest bg-green-50 text-teal-700">
 												COMPLETE
@@ -498,7 +562,7 @@ export default function AdminRiwayatPDSPage() {
 													<FileText size={18} />
 												</button>
 												<button
-													onClick={() => handleMarkAsPaid(data.id)}
+													onClick={() => openPaymentModal(data)}
 													disabled={data.statusPembayaran === 'SUDAH_DIBAYAR' || processingPaymentId === data.id}
 													className={`p-2 rounded-xl transition-all shadow-sm ${
 														data.statusPembayaran === 'SUDAH_DIBAYAR'
@@ -558,6 +622,72 @@ export default function AdminRiwayatPDSPage() {
 					</div>
 				</div>
 			</div>
+
+			{paymentTarget && (
+				<div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 px-4 py-6">
+					<div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+						<div className="mb-5 flex items-start justify-between gap-4">
+							<div>
+								<h2 className="text-xl font-black text-[#202c45]">Konfirmasi Pembayaran</h2>
+								<p className="mt-1 text-sm text-gray-500">
+									{paymentTarget.user?.nama || paymentTarget.user?.name || 'Surveyor'} - {paymentTarget.noAgenda || '-'}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={closePaymentModal}
+								className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-red-500"
+							>
+								<XCircle size={22} />
+							</button>
+						</div>
+
+						<div className="space-y-4">
+							<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<p className="text-[10px] font-bold uppercase text-slate-400">No. SO</p>
+										<p className="mt-1 font-semibold text-slate-800">{paymentTarget.so || '-'}</p>
+									</div>
+									<div>
+										<p className="text-[10px] font-bold uppercase text-slate-400">Nominal</p>
+										<p className="mt-1 font-semibold text-slate-800">{formatRupiah(Number(paymentTarget.nominalPDS) || 0)}</p>
+									</div>
+								</div>
+							</div>
+
+							<label className="block">
+								<span className="mb-1 block text-xs font-bold uppercase text-gray-600">Tanggal Pembayaran</span>
+								<input
+									type="date"
+									value={paymentDate}
+									onChange={(e) => setPaymentDate(e.target.value)}
+									className="h-11 w-full rounded-xl border border-gray-300 px-3 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+									required
+								/>
+							</label>
+
+							<div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+								<button
+									type="button"
+									onClick={closePaymentModal}
+									className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-50"
+								>
+									Batal
+								</button>
+								<button
+									type="button"
+									onClick={handleMarkAsPaid}
+									disabled={processingPaymentId === paymentTarget.id}
+									className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+								>
+									{processingPaymentId === paymentTarget.id ? 'Menyimpan...' : 'Konfirmasi Bayar'}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{previewData && (
 				<div className='fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-md p-6'>

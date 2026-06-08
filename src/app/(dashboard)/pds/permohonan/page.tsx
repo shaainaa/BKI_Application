@@ -38,6 +38,7 @@ export default function PermohonanPDS() {
   const [keperluanSearch, setKeperluanSearch] = useState('');
 
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [agendaSearch, setAgendaSearch] = useState('');
   const [selectedLokasi, setSelectedLokasi] = useState<string[]>([]);
   const [selectedKeperluan, setSelectedKeperluan] = useState<string[]>([]);
 
@@ -99,11 +100,12 @@ export default function PermohonanPDS() {
   const filteredData = useMemo(() => {
     return tableData.filter((item) => {
       const matchStatus = selectedStatus === '' || item.status === selectedStatus;
+      const matchAgenda = agendaSearch.trim() === '' || String(item.noAgenda || '').toLowerCase().includes(agendaSearch.trim().toLowerCase());
       const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
       const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
-      return matchStatus && matchLokasi && matchKeperluan;
+      return matchStatus && matchAgenda && matchLokasi && matchKeperluan;
     });
-  }, [tableData, selectedStatus, selectedLokasi, selectedKeperluan]);
+  }, [tableData, selectedStatus, agendaSearch, selectedLokasi, selectedKeperluan]);
 
   const summary = {
     total: tableData.length,
@@ -278,6 +280,14 @@ export default function PermohonanPDS() {
             <option value="COMPLETED">Completed</option>
           </select>
 
+          <input
+            type="text"
+            value={agendaSearch}
+            onChange={(e) => setAgendaSearch(e.target.value)}
+            placeholder="Cari No. Agenda"
+            className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          />
+
           <FilterDropdown
             label="Lokasi"
             isOpen={isLokasiOpen}
@@ -302,10 +312,6 @@ export default function PermohonanPDS() {
             otherDropdownClose={() => setIsLokasiOpen(false)}
           />
 
-          <input
-            type="date"
-            className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white cursor-pointer"
-          />
         </div>
       </div>
 

@@ -604,7 +604,7 @@ export default function AdminDashboardPage() {
 						</p>
 					</div>
 					<div className="inline-flex w-fit items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 md:text-sm">
-						<Calendar size={16} /> Agenda per bulan ditampilkan 5 item per halaman
+						<Calendar size={16} /> Kegiatan per bulan ditampilkan 5 item per halaman
 					</div>
 				</div>
 
@@ -635,7 +635,7 @@ export default function AdminDashboardPage() {
 
 					<article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
 						<div className="mb-3 flex items-center justify-between">
-							<p className="text-sm font-semibold text-emerald-900">Agenda Bulan Ini</p>
+							<p className="text-sm font-semibold text-emerald-900">Kegiatan Bulan Ini</p>
 							<Calendar className="text-emerald-700" size={20} />
 						</div>
 						<p className="text-3xl font-black text-emerald-900">{stats.totalAgenda}</p>
@@ -685,16 +685,16 @@ export default function AdminDashboardPage() {
 					</article>
 
 					<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-						<h2 className="mb-3 text-lg font-black text-slate-900">Ringkasan Agenda</h2>
+						<h2 className="mb-3 text-lg font-black text-slate-900">Ringkasan Kegiatan</h2>
 						<div className="space-y-2">
 							<div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
-								<p className="text-xs font-semibold text-cyan-700">Agenda Hari Ini</p>
+								<p className="text-xs font-semibold text-cyan-700">Kegiatan Hari Ini</p>
 								<p className="mt-1 text-2xl font-black text-cyan-900">{stats.agendaToday}</p>
 							</div>
 							<div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
 								<p className="mb-2 text-xs font-semibold text-slate-700">Kategori Tertinggi Bulan Ini</p>
 								{agendaCategorySummary.length === 0 ? (
-									<p className="text-xs text-slate-500">Belum ada agenda untuk bulan ini.</p>
+									<p className="text-xs text-slate-500">Belum ada Kegiatan untuk bulan ini.</p>
 								) : (
 									<div className="space-y-1">
 										{agendaCategorySummary.map((item) => (
@@ -712,14 +712,14 @@ export default function AdminDashboardPage() {
 
 				<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 						<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-							<h2 className="text-xl font-black text-slate-900">Kalender Agenda</h2>
+							<h2 className="text-xl font-black text-slate-900">Kalender Kegiatan</h2>
 							<div className="flex flex-wrap items-center gap-2">
 								<button
 									type="button"
 									onClick={openAgendaModal}
 									className="rounded-lg bg-cyan-700 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-cyan-800"
 								>
-									+ Tambah Agenda
+									+ Tambah Kegiatan
 								</button>
 								<button
 									type="button"
@@ -793,7 +793,7 @@ export default function AdminDashboardPage() {
 
 						<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
 							<p className="mb-3 text-sm font-bold text-slate-700">
-								Agenda Bulan {MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+								Kegiatan Bulan {MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getFullYear()}
 							</p>
 
 							{agendaForSelectedMonth.length === 0 ? (
@@ -906,7 +906,7 @@ export default function AdminDashboardPage() {
 
 				<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 					<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-						<h2 className="text-xl font-black text-slate-900">Agenda Tanggal Terpilih</h2>
+						<h2 className="text-xl font-black text-slate-900">Kegiatan Tanggal Terpilih</h2>
 						<p className="text-sm font-semibold text-slate-600">{formatDateFromDate(selectedDay)}</p>
 					</div>
 

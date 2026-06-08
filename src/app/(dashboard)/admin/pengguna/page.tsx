@@ -158,7 +158,6 @@ export default function AdminPenggunaPage() {
 	};
 
 	const validateEditForm = () => {
-		if (!editForm.nama.trim()) return "Nama wajib diisi.";
 		if (!editForm.email.trim()) return "Email wajib diisi.";
 		if (!editForm.username.trim()) return "Username wajib diisi.";
 		if (editForm.password.trim() && editForm.password.trim().length < 6) return "Password baru minimal 6 karakter.";
@@ -188,7 +187,6 @@ export default function AdminPenggunaPage() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					id: editingUser.id,
-					nama: editForm.nama.trim(),
 					email: editForm.email.trim(),
 					username: editForm.username.trim(),
 					password: editForm.password.trim(),
@@ -469,8 +467,8 @@ export default function AdminPenggunaPage() {
 									<input
 										type="text"
 										value={editForm.nama}
-										onChange={(e) => onChangeEditInput("nama", e.target.value)}
-										className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#0A8E9A]"
+										readOnly
+										className="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 outline-none"
 									/>
 								</label>
 								<label className="block space-y-1">

@@ -15,7 +15,6 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
     namaSurveyor: '',
     email: '',
     permohonan: '',
-    tanggalPengajuan: '',
     lokasi: '',
     keperluan: '',
     nomorAgenda: '',
@@ -157,16 +156,6 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
                 <option value="LEMBUR">LEMBUR</option>
                 <option value="TRANSPORTASI">TRANSPORTASI</option>
               </select>
-            </div>
-
-            {/* Tanggal Pengajuan */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-gray-800">Tanggal Pengajuan</label>
-              <input 
-                type="date" name="tanggalPengajuan" value={formData.tanggalPengajuan} onChange={handleChange}
-                className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-500 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                required
-              />
             </div>
 
             {/* Lokasi (Otomatis Capslock) */}

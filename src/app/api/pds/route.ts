@@ -1,5 +1,4 @@
     import { NextRequest, NextResponse } from 'next/server';
-    import { Op } from 'sequelize';
     import  Pds  from '@/models/Pds';
     import { uploadOneToUploadThing } from '@/lib/uploadthing';
     import { requireAuth } from '@/lib/session';
@@ -38,19 +37,19 @@
                 );
             }
 
-            const existingRangeConflict = await Pds.findOne({
+            const existingReturnDateConflict = await Pds.findOne({
                 where: {
                     userId,
-                    tglBerangkat: { [Op.lte]: newStartDate },
-                    tglKembali: { [Op.gte]: newStartDate },
+                    tglBerangkat: newStartDate,
+                    tglKembali: newEndDate,
                 },
             });
 
-            if (existingRangeConflict) {
+            if (existingReturnDateConflict) {
                 return NextResponse.json(
                     {
                         success: false,
-                        message: 'Permohonan ditolak karena tanggal berangkat berada dalam rentang survey yang sudah diajukan sebelumnya.',
+                        message: 'Permohonan ditolak karena tanggal berangkat dan tanggal kembali sudah pernah diajukan.',
                     },
                     { status: 409 }
                 );
@@ -65,7 +64,7 @@
             const newPds = await Pds.create({
                 userId,
                 permohonan: (data.get('permohonan') as string).toUpperCase(),
-                tanggalPengajuan: data.get('tanggalPengajuan') || undefined,
+                tanggalPengajuan: tglBerangkat,
                 lokasi: data.get('lokasi'),
                 keperluan: data.get('keperluan'),
                 noAgenda: data.get('noAgenda'),

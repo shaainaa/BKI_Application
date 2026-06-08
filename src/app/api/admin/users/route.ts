@@ -110,7 +110,6 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const {
       id,
-      nama,
       email,
       username,
       password,
@@ -124,9 +123,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'ID pengguna wajib diisi.' }, { status: 400 });
     }
 
-    if (!nama || !email || !username) {
+    if (!email || !username) {
       return NextResponse.json(
-        { success: false, error: 'Nama, email, dan username wajib diisi.' },
+        { success: false, error: 'Email dan username wajib diisi.' },
         { status: 400 }
       );
     }
@@ -163,7 +162,6 @@ export async function PUT(req: NextRequest) {
     }
 
     const updates: Record<string, string | null> = {
-      nama,
       email,
       username,
       jabatanSurveyor: jabatanSurveyor || null,

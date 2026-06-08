@@ -29,6 +29,7 @@ export default function RiwayatPDS() {
   const [keperluanSearch, setKeperluanSearch] = useState('');
 
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('');
+  const [agendaSearch, setAgendaSearch] = useState('');
   const [selectedLokasi, setSelectedLokasi] = useState<string[]>([]);
   const [selectedKeperluan, setSelectedKeperluan] = useState<string[]>([]);
 
@@ -81,15 +82,16 @@ export default function RiwayatPDS() {
     return tableData.filter(item => {
       const matchStatus = item.status === 'COMPLETED'; // Hanya tampilkan yang COMPLETED
       const matchPayment = selectedPaymentStatus === '' || item.statusPembayaran === selectedPaymentStatus;
+      const matchAgenda = agendaSearch.trim() === '' || String(item.noAgenda || '').toLowerCase().includes(agendaSearch.trim().toLowerCase());
       const matchLokasi = selectedLokasi.length === 0 || selectedLokasi.includes(item.lokasi);
       const matchKeperluan = selectedKeperluan.length === 0 || selectedKeperluan.includes(item.keperluan);
-      return matchStatus && matchPayment && matchLokasi && matchKeperluan;
+      return matchStatus && matchPayment && matchAgenda && matchLokasi && matchKeperluan;
     });
-  }, [tableData, selectedPaymentStatus, selectedLokasi, selectedKeperluan]);
+  }, [tableData, selectedPaymentStatus, agendaSearch, selectedLokasi, selectedKeperluan]);
 
   // Summary Card Data (Sesuai kebutuhan Finansial)
   const summary = {
-    sudahBayar: tableData.filter(i => i.statusPembayaran === 'Sudah').length,
+    sudahBayar: tableData.filter(i => i.statusPembayaran === 'SUDAH_DIBAYAR').length,
     totalVisit: tableData.length,
     totalNominal: tableData.reduce((total, item) => total + (Number(item.nominalPDS) || 0), 0)
   };
@@ -132,9 +134,17 @@ export default function RiwayatPDS() {
             className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white"
           >
             <option value="">Status Pembayaran</option>
-            <option value="Sudah">Sudah Dibayar</option>
-            <option value="Belum">Belum Dibayar</option>
+            <option value="SUDAH_DIBAYAR">Sudah Dibayar</option>
+            <option value="BELUM_DIBAYAR">Belum Dibayar</option>
           </select>
+
+          <input
+            type="text"
+            value={agendaSearch}
+            onChange={(e) => setAgendaSearch(e.target.value)}
+            placeholder="Cari No. Agenda"
+            className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          />
 
           <FilterDropdown 
             label="Lokasi" isOpen={isLokasiOpen} setIsOpen={setIsLokasiOpen} 
@@ -152,7 +162,6 @@ export default function RiwayatPDS() {
             otherDropdownClose={() => setIsLokasiOpen(false)}
           />
 
-          <input type="date" className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white cursor-pointer" />
         </div>
       </div>
 
@@ -192,12 +201,12 @@ export default function RiwayatPDS() {
                   </td>
                   <td className="py-4 px-6 text-sm text-gray-500 italic">{row.keperluan}</td>
                   <td className="py-4 px-6 text-sm font-bold text-teal-700">{row.nominalPDS ? formatRupiah(row.nominalPDS) : '-'}</td>
-                  <td className="py-4 px-6 text-sm text-gray-600">{row.noAgenda}</td>
+                  <td className="py-4 px-6 text-sm text-gray-600">{row.so || '-'}</td>
                   <td className="py-4 px-6 text-center">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
-                      row.statusPembayaran === 'Sudah' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+                      row.statusPembayaran === 'SUDAH_DIBAYAR' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
                     }`}>
-                      {row.statusPembayaran || 'BELUM'}
+                      {row.statusPembayaran === 'SUDAH_DIBAYAR' ? 'SUDAH DIBAYAR' : 'BELUM DIBAYAR'}
                     </span>
                   </td>
                   <td className="py-4 px-6 text-sm text-gray-600 text-center">{row.tanggalPembayaran || '-'}</td>
