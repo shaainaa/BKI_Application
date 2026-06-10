@@ -56,7 +56,7 @@ export const PdsTemplate = ({ data }: { data: any }) => (
         <DetailRow label="VISIT KE." value={`${data.visitKe}                                                             KETERANGAN VISIT: ${data.keteranganVisit}`} />
       </View>
 
-      <Text style={{ marginTop: 20, marginRight: 50, textAlign: 'right' }}>Surabaya, {formatOnlyDate(data.tanggalPengajuan)}</Text>
+      <Text style={{ marginTop: 20, marginRight: 50, textAlign: 'right' }}>Surabaya, {formatOnlyDate(data.tglBerangkat || data.tanggalPengajuan)}</Text>
 
       <View style={ styles.footer}>
         <View style={styles.signBox}>
