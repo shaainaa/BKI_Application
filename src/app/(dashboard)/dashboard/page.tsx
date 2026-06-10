@@ -303,7 +303,6 @@ export default function DashboardSurveyorPage() {
   };
 
   const pdsAgendaList = useMemo<AgendaItem[]>(() => {
-    const today = toStartOfDay(new Date());
     return pdsList
       .filter((item) => item.tglBerangkat)
       .map((item) => {
@@ -318,8 +317,7 @@ export default function DashboardSurveyorPage() {
           category: "PDS",
           source: "PDS" as const,
         };
-        })
-        .filter((agenda) => toStartOfDay(agenda.end) >= today);
+        });
   }, [pdsList]);
 
     const pdsAgendaRows = useMemo(() => {
@@ -813,17 +811,20 @@ export default function DashboardSurveyorPage() {
                 <p className="text-xs text-slate-500">Filter khusus agenda PDS surveyor</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <input
+                  type="search"
+                  list="pds-agenda-status-options"
                   value={pdsAgendaStatusFilter}
                   onChange={(e) => setPdsAgendaStatusFilter(e.target.value)}
+                  placeholder="Semua Status"
                   className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
-                >
-                  <option value="">Semua Status</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="APPROVED">APPROVED</option>
-                  <option value="SUBMITTED">SUBMITTED</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                </select>
+                />
+                <datalist id="pds-agenda-status-options">
+                  <option value="PENDING" />
+                  <option value="APPROVED" />
+                  <option value="SUBMITTED" />
+                  <option value="COMPLETED" />
+                </datalist>
                 <input
                   type="month"
                   value={pdsAgendaMonth}
@@ -840,7 +841,7 @@ export default function DashboardSurveyorPage() {
                     <th className="px-3 py-2">Berangkat</th>
                     <th className="px-3 py-2">Kembali</th>
                     <th className="px-3 py-2">Lokasi</th>
-                    <th className="px-3 py-2">Keperluan</th>
+                    <th className="px-3 py-2">Keperluan/Objek</th>
                     <th className="px-3 py-2 text-center">Status</th>
                   </tr>
                 </thead>

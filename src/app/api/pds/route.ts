@@ -10,6 +10,8 @@
 
             const data = await req.formData();
             const userId = auth.user.id;
+            const permohonan = ((data.get('permohonan') as string) || '').toUpperCase();
+            const noAgenda = ((data.get('noAgenda') as string) || '').trim();
             const tglBerangkat = data.get('tglBerangkat') as string;
             const tglKembali = data.get('tglKembali') as string;
 
@@ -37,7 +39,7 @@
                 );
             }
 
-            const existingReturnDateConflict = await Pds.findOne({
+            const existingReturnDateConflicts = await Pds.findAll({
                 where: {
                     userId,
                     tglBerangkat: newStartDate,
@@ -45,11 +47,17 @@
                 },
             });
 
-            if (existingReturnDateConflict) {
+            const hasSameDateConflict = existingReturnDateConflicts.length > 0;
+            const isAllowedLemburOnSameDate =
+                permohonan === 'LEMBUR' &&
+                noAgenda &&
+                existingReturnDateConflicts.every((item) => String(item.get('noAgenda') || '').trim() !== noAgenda);
+
+            if (hasSameDateConflict && !isAllowedLemburOnSameDate) {
                 return NextResponse.json(
                     {
                         success: false,
-                        message: 'Permohonan ditolak karena tanggal berangkat dan tanggal kembali sudah pernah diajukan.',
+                        message: 'Permohonan ditolak karena tanggal berangkat dan tanggal kembali sudah pernah diajukan. Lembur di tanggal yang sama hanya diizinkan jika nomor agenda berbeda.',
                     },
                     { status: 409 }
                 );
@@ -63,11 +71,11 @@
             }
             const newPds = await Pds.create({
                 userId,
-                permohonan: (data.get('permohonan') as string).toUpperCase(),
-                tanggalPengajuan: tglBerangkat,
+                permohonan,
+                tanggalPengajuan: new Date(),
                 lokasi: data.get('lokasi'),
                 keperluan: data.get('keperluan'),
-                noAgenda: data.get('noAgenda'),
+                noAgenda,
                 tglBerangkat,
                 jamBerangkat: data.get('jamBerangkat') || null,
                 tglKembali,

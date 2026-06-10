@@ -20,7 +20,7 @@ import {
 
 type PdsItem = {
 	id: number;
-	status: "PENDING" | "APPROVED" | "COMPLETED";
+	status: "PENDING" | "WAITING_SECOND_APPROVAL" | "APPROVED" | "SUBMITTED" | "COMPLETED";
 	permohonan: string;
 	lokasi: string;
 	tanggalPengajuan: string;
@@ -168,7 +168,9 @@ export default function AdminDashboardPage() {
 		const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
 		const totalPds = pdsList.length;
-		const waitingApproval = pdsList.filter((item) => item.status === "PENDING").length;
+		const waitingApproval = pdsList.filter(
+			(item) => item.status === "PENDING" || item.status === "WAITING_SECOND_APPROVAL"
+		).length;
 		const activeSurveyor = new Set(
 			pdsList
 				.filter((item) => item.status !== "COMPLETED" && item.user?.id)
@@ -316,7 +318,7 @@ export default function AdminDashboardPage() {
 
 	const pendingApprovals = useMemo(() => {
 		return pdsList
-			.filter((item) => item.status === "PENDING")
+			.filter((item) => item.status === "PENDING" || item.status === "WAITING_SECOND_APPROVAL")
 			.sort((a, b) => new Date(b.tanggalPengajuan).getTime() - new Date(a.tanggalPengajuan).getTime())
 			.slice(0, 5);
 	}, [pdsList]);
@@ -502,13 +504,17 @@ export default function AdminDashboardPage() {
 
 	const getStatusLabel = (status: PdsItem["status"]) => {
 		if (status === "PENDING") return "Menunggu Approval";
+		if (status === "WAITING_SECOND_APPROVAL") return "Pending Approval Kedua";
 		if (status === "APPROVED") return "Aktif Survey";
+		if (status === "SUBMITTED") return "Menunggu Verifikasi";
 		return "Selesai";
 	};
 
 	const getStatusClass = (status: PdsItem["status"]) => {
 		if (status === "PENDING") return "bg-amber-100 text-amber-800";
+		if (status === "WAITING_SECOND_APPROVAL") return "bg-orange-100 text-orange-800";
 		if (status === "APPROVED") return "bg-sky-100 text-sky-800";
+		if (status === "SUBMITTED") return "bg-indigo-100 text-indigo-800";
 		return "bg-emerald-100 text-emerald-800";
 	};
 
@@ -675,7 +681,9 @@ export default function AdminDashboardPage() {
 									<div key={item.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
 										<div className="flex flex-wrap items-center justify-between gap-2">
 											<p className="text-sm font-bold text-slate-800">{item.user?.nama || "Surveyor"} - {item.permohonan}</p>
-											<span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">PENDING</span>
+											<span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${getStatusClass(item.status)}`}>
+												{getStatusLabel(item.status)}
+											</span>
 										</div>
 										<p className="mt-1 text-xs text-slate-600">{item.lokasi} - {formatDateLabel(item.tanggalPengajuan)}</p>
 									</div>

@@ -363,68 +363,53 @@ export default function AdminRiwayatPDSPage() {
 								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
-								<select
+								<SearchableFilterInput
+									id="riwayat-nama"
 									value={filters.nama}
-									onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Nama</option>
-									{filterOptions.nama.map((item) => (
-										<option key={item} value={item}>{item}</option>
-									))}
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, nama: value }))}
+									placeholder="Semua Nama"
+									options={filterOptions.nama}
+								/>
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Lokasi</label>
-								<select
+								<SearchableFilterInput
+									id="riwayat-lokasi"
 									value={filters.lokasi}
-									onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Lokasi</option>
-									{filterOptions.lokasi.map((item) => (
-										<option key={item} value={item}>{item}</option>
-									))}
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, lokasi: value }))}
+									placeholder="Semua Lokasi"
+									options={filterOptions.lokasi}
+								/>
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Jenis</label>
-								<select
+								<SearchableFilterInput
+									id="riwayat-jenis"
 									value={filters.permohonan}
-									onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Jenis</option>
-									{filterOptions.permohonan.map((item) => (
-										<option key={item} value={item}>{item}</option>
-									))}
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, permohonan: value }))}
+									placeholder="Semua Jenis"
+									options={filterOptions.permohonan}
+								/>
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tahun</label>
-								<select
+								<SearchableFilterInput
+									id="riwayat-tahun"
 									value={filters.tahun}
-									onChange={(e) => setFilters((prev) => ({ ...prev, tahun: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Tahun</option>
-									{filterOptions.tahun.map((item) => (
-										<option key={item} value={item}>{item}</option>
-									))}
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, tahun: value }))}
+									placeholder="Semua Tahun"
+									options={filterOptions.tahun}
+								/>
 							</div>
 							<div>
-								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan</label>
-								<select
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan/Objek</label>
+								<SearchableFilterInput
+									id="riwayat-keperluan"
 									value={filters.keperluan}
-									onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Keperluan</option>
-									{filterOptions.keperluan.map((item) => (
-										<option key={item} value={item}>{item}</option>
-									))}
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, keperluan: value }))}
+									placeholder="Semua Keperluan/Objek"
+									options={filterOptions.keperluan}
+								/>
 							</div>
 								</div>
 							</div>
@@ -453,15 +438,13 @@ export default function AdminRiwayatPDSPage() {
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Status Pembayaran</label>
-								<select
+								<SearchableFilterInput
+									id="riwayat-status-pembayaran"
 									value={filters.statusPembayaran}
-									onChange={(e) => setFilters((prev) => ({ ...prev, statusPembayaran: e.target.value }))}
-									className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-								>
-									<option value="">Semua Status Pembayaran</option>
-									<option value="BELUM_DIBAYAR">Belum Dibayar</option>
-									<option value="SUDAH_DIBAYAR">Sudah Dibayar</option>
-								</select>
+									onChange={(value) => setFilters((prev) => ({ ...prev, statusPembayaran: value }))}
+									placeholder="Semua Status Pembayaran"
+									options={['BELUM_DIBAYAR', 'SUDAH_DIBAYAR']}
+								/>
 							</div>
 								</div>
 							</div>
@@ -509,7 +492,7 @@ export default function AdminRiwayatPDSPage() {
 								<th className="py-4 px-6">Lokasi</th>
 								<th className="py-4 px-6 text-center">Tanggal</th>
 								<th className="py-4 px-6 text-center">Jenis</th>
-								<th className="py-4 px-6">Keperluan</th>
+								<th className="py-4 px-6">Keperluan/Objek</th>
 								<th className="py-4 px-6 text-center">No. Agenda</th>
 								<th className="py-4 px-6 text-center">No. SO</th>
 								<th className="py-4 px-6 text-center">Status</th>
@@ -704,5 +687,37 @@ export default function AdminRiwayatPDSPage() {
 				</div>
 			)}
 		</div>
+	);
+}
+
+function SearchableFilterInput({
+	id,
+	value,
+	onChange,
+	placeholder,
+	options,
+}: {
+	id: string;
+	value: string;
+	onChange: (value: string) => void;
+	placeholder: string;
+	options: string[];
+}) {
+	return (
+		<>
+			<input
+				type="search"
+				list={id}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+			/>
+			<datalist id={id}>
+				{options.map((item) => (
+					<option key={item} value={item} />
+				))}
+			</datalist>
+		</>
 	);
 }

@@ -155,7 +155,7 @@ export default function RiwayatPDS() {
           />
 
           <FilterDropdown 
-            label="Keperluan" isOpen={isKeperluanOpen} setIsOpen={setIsKeperluanOpen} 
+            label="Keperluan/Objek" isOpen={isKeperluanOpen} setIsOpen={setIsKeperluanOpen} 
             searchValue={keperluanSearch} setSearchValue={setKeperluanSearch} 
             options={opsiKeperluan} selectedOptions={selectedKeperluan} 
             onToggle={(val: string) => toggleFilter(selectedKeperluan, setSelectedKeperluan, val)}
@@ -173,7 +173,7 @@ export default function RiwayatPDS() {
               <th className="py-4 px-6 font-bold text-center">Tanggal</th>
               <th className="py-4 px-6 font-bold text-center">Tujuan</th>
               <th className="py-4 px-6 font-bold text-center">Permohonan</th>
-              <th className="py-4 px-6 font-bold text-center">Keperluan</th>
+              <th className="py-4 px-6 font-bold text-center">Keperluan/Objek</th>
               <th className="py-4 px-6 font-bold text-center">Nominal PDS</th>
               <th className="py-4 px-6 font-bold text-center">SO</th>
               <th className="py-4 px-6 font-bold text-center">Status Bayar</th>

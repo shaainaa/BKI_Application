@@ -268,17 +268,20 @@ export default function PermohonanPDS() {
           <p className="text-sm font-bold uppercase tracking-wider">Filter</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <select
+          <input
+            type="search"
+            list="surveyor-status-options"
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
+            placeholder="Semua Status"
             className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-600 outline-none focus:ring-2 focus:ring-teal-500 bg-white"
-          >
-            <option value="">Semua Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="COMPLETED">Completed</option>
-          </select>
+          />
+          <datalist id="surveyor-status-options">
+            <option value="PENDING" />
+            <option value="APPROVED" />
+            <option value="SUBMITTED" />
+            <option value="COMPLETED" />
+          </datalist>
 
           <input
             type="text"
@@ -301,7 +304,7 @@ export default function PermohonanPDS() {
           />
 
           <FilterDropdown
-            label="Keperluan"
+            label="Keperluan/Objek"
             isOpen={isKeperluanOpen}
             setIsOpen={setIsKeperluanOpen}
             searchValue={keperluanSearch}
@@ -323,7 +326,7 @@ export default function PermohonanPDS() {
               <th className="py-4 px-6 font-bold text-center">No. Agenda</th>
               <th className="py-4 px-6 font-bold text-center">Lokasi</th>
               <th className="py-4 px-6 font-bold text-center">Permohonan</th>
-              <th className="py-4 px-6 font-bold text-center">Keperluan</th>
+              <th className="py-4 px-6 font-bold text-center">Keperluan/Objek</th>
               <th className="py-4 px-6 font-bold text-center">Status PDS</th>
               <th className="py-4 px-6 font-bold text-center">Submit Bukti</th>
               <th className="py-4 px-6 font-bold text-center">Surat</th>
@@ -548,26 +551,26 @@ function FilterDropdown({
         <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-teal-500' : 'text-gray-400'}`} />
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-20 p-3 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-20 p-3 text-slate-800 animate-in fade-in slide-in-from-top-2">
           <div className="relative mb-3">
             <input
               type="text"
               placeholder={`Cari ${label}...`}
-              className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs pl-8 outline-none focus:border-teal-500"
+              className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs pl-8 text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
             />
             <Search size={14} className="absolute left-2.5 top-2 text-gray-400" />
           </div>
-          <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar text-xs">
+          <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar text-xs text-slate-800">
             {options
               .filter((o: string) => o.toLowerCase().includes(searchValue.toLowerCase()))
               .map((opt: string, i: number) => (
-                <label key={i} className="flex items-center gap-2 p-2 hover:bg-teal-50 rounded-lg cursor-pointer transition-colors">
-                  <input type="checkbox" className="accent-[#0A8E9A]" checked={selectedOptions.includes(opt)} onChange={() => onToggle(opt)} /> {opt}
+                <label key={i} className="flex items-center gap-2 p-2 text-slate-800 hover:bg-teal-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" className="accent-[#0A8E9A]" checked={selectedOptions.includes(opt)} onChange={() => onToggle(opt)} /> <span>{opt}</span>
                 </label>
               ))}
-            {options.length === 0 && <p className="text-center text-gray-400 py-2">Tidak ada data</p>}
+            {options.length === 0 && <p className="text-center text-slate-500 py-2">Tidak ada data</p>}
           </div>
         </div>
       )}

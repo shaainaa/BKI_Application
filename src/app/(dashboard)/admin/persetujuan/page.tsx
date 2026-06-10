@@ -174,15 +174,6 @@ export default function AdminPersetujuanPDS() {
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const formatDateTime = (dateString?: string | null) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    if (Number.isNaN(d.getTime())) return '-';
-    const datePart = d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    return `${datePart} ${timePart}`;
-  };
-
   const formatDateInput = (dateString: string) => {
     if (!dateString) return '';
     const d = new Date(dateString);
@@ -518,68 +509,53 @@ export default function AdminPersetujuanPDS() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-nama"
                   value={filters.nama}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, nama: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Nama</option>
-                  {filterOptions.nama.map((item) => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, nama: value }))}
+                  placeholder="Semua Nama"
+                  options={filterOptions.nama}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Lokasi</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-lokasi"
                   value={filters.lokasi}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, lokasi: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Lokasi</option>
-                  {filterOptions.lokasi.map((item) => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, lokasi: value }))}
+                  placeholder="Semua Lokasi"
+                  options={filterOptions.lokasi}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Jenis</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-jenis"
                   value={filters.permohonan}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, permohonan: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Jenis</option>
-                  {filterOptions.permohonan.map((item) => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, permohonan: value }))}
+                  placeholder="Semua Jenis"
+                  options={filterOptions.permohonan}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tahun</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-tahun"
                   value={filters.tahun}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, tahun: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Tahun</option>
-                  {filterOptions.tahun.map((item) => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, tahun: value }))}
+                  placeholder="Semua Tahun"
+                  options={filterOptions.tahun}
+                />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan</label>
-                <select
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan/Objek</label>
+                <SearchableFilterInput
+                  id="persetujuan-keperluan"
                   value={filters.keperluan}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, keperluan: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Keperluan</option>
-                  {filterOptions.keperluan.map((item) => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, keperluan: value }))}
+                  placeholder="Semua Keperluan/Objek"
+                  options={filterOptions.keperluan}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Mulai</label>
@@ -611,32 +587,23 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Verifikasi Bukti</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-verifikasi"
                   value={filters.verifikasiBukti}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, verifikasiBukti: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Status</option>
-                  <option value="BELUM_UPLOAD">Belum Upload</option>
-                  <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
-                  <option value="PERLU_REVISI">Perlu Revisi</option>
-                  <option value="DISETUJUI">Disetujui</option>
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, verifikasiBukti: value }))}
+                  placeholder="Semua Status"
+                  options={['BELUM_UPLOAD', 'MENUNGGU_VERIFIKASI', 'PERLU_REVISI', 'DISETUJUI']}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Status</label>
-                <select
+                <SearchableFilterInput
+                  id="persetujuan-status"
                   value={filters.status}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-                  className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-                >
-                  <option value="">Semua Status</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="WAITING_SECOND_APPROVAL">Pending (1/2)</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="SUBMITTED">Submitted</option>
-                  <option value="COMPLETED">Complete</option>
-                </select>
+                  onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+                  placeholder="Semua Status"
+                  options={['PENDING', 'WAITING_SECOND_APPROVAL', 'APPROVED', 'SUBMITTED', 'COMPLETED']}
+                />
               </div>
             </div>
           </div>
@@ -650,7 +617,7 @@ export default function AdminPersetujuanPDS() {
                 <th className="py-4 px-6">Lokasi</th>
                 <th className="py-4 px-6 text-center">Tanggal</th>
                 <th className="py-4 px-6 text-center">Jenis</th>
-                <th className="py-4 px-6">Keperluan</th>
+                <th className="py-4 px-6">Keperluan/Objek</th>
                 <th className="py-4 px-6 text-center">No. Agenda</th>
                 <th className="py-4 px-6 text-center">Status</th>
                 <th className="py-4 px-6 text-center">Verifikasi Bukti</th>
@@ -673,7 +640,7 @@ export default function AdminPersetujuanPDS() {
                     <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
                       <td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
-                      <td className="py-4 px-6 text-center">{formatDateTime(data.tanggalPengajuan)}</td>
+                      <td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
                       <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                       <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
                       <td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>
@@ -947,5 +914,37 @@ function Input({
         className="w-full mt-1 bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
       />
     </div>
+  );
+}
+
+function SearchableFilterInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  options,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  options: string[];
+}) {
+  return (
+    <>
+      <input
+        type="search"
+        list={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
+      />
+      <datalist id={id}>
+        {options.map((item) => (
+          <option key={item} value={item} />
+        ))}
+      </datalist>
+    </>
   );
 }
