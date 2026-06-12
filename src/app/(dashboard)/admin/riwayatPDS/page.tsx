@@ -4,18 +4,21 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Download, FileText, XCircle } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
+import AdminFilterDropdown from '@/components/AdminFilterDropdown';
 
 const DEFAULT_FILTERS = {
-	nama: '',
-	lokasi: '',
-	permohonan: '',
-	tahun: '',
+	nama: [] as string[],
+	lokasi: [] as string[],
+	permohonan: [] as string[],
+	tahun: [] as string[],
 	tanggalMulai: '',
 	tanggalAkhir: '',
-	keperluan: '',
+	keperluan: [] as string[],
 	noAgenda: '',
 	so: '',
-	statusPembayaran: '',
+	statusPds: [] as string[],
+	statusBukti: [] as string[],
+	statusPembayaran: [] as string[],
 	tanggalPembayaran: '',
 };
 
@@ -31,25 +34,25 @@ export default function AdminRiwayatPDSPage() {
 
 	const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
-	const fetchCompletedPds = async () => {
+	const fetchRekapPds = async () => {
 		setLoading(true);
 		try {
 			const res = await fetch('/api/admin/pds');
 			const result = await res.json();
 
 			if (result.success) {
-				const completedOnly = (result.data || []).filter((item: any) => item.status === 'COMPLETED');
-				setListPds(completedOnly);
+				const withNominal = (result.data || []).filter((item: any) => item.nominalPDS !== null && typeof item.nominalPDS !== 'undefined' && item.nominalPDS !== '');
+				setListPds(withNominal);
 			}
 		} catch (err) {
-			console.error('Gagal mengambil riwayat PDS:', err);
+			console.error('Gagal mengambil rekap PDS:', err);
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	useEffect(() => {
-		fetchCompletedPds();
+		fetchRekapPds();
 	}, []);
 
 	useEffect(() => {
@@ -90,27 +93,31 @@ export default function AdminRiwayatPDSPage() {
 
 	const filteredPds = useMemo(() => {
 		return listPds.filter((item: any) => {
-			const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
-			const lokasi = (item.lokasi || '').toLowerCase();
-			const permohonan = (item.permohonan || '').toLowerCase();
-			const keperluan = (item.keperluan || '').toLowerCase();
+			const namaUser = item.user?.nama || item.user?.name || '';
+			const lokasi = item.lokasi || '';
+			const permohonan = item.permohonan || '';
+			const keperluan = item.keperluan || '';
 			const noAgenda = (item.noAgenda || '').toLowerCase();
 			const so = (item.so || '').toLowerCase();
 			const itemDate = formatDateInput(item.tanggalPengajuan);
 			const itemPaymentDate = formatDateInput(item.tanggalPembayaran);
 			const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
+			const statusPds = item.status || '';
+			const buktiStatus = getBuktiSummary(item.bukti || []).key;
 			const itemYear = itemDate ? itemDate.slice(0, 4) : '';
 
-			const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
-			const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
-			const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
-			const matchTahun = !filters.tahun || itemYear === filters.tahun;
+			const matchNama = filters.nama.length === 0 || filters.nama.includes(namaUser);
+			const matchLokasi = filters.lokasi.length === 0 || filters.lokasi.includes(lokasi);
+			const matchPermohonan = filters.permohonan.length === 0 || filters.permohonan.includes(permohonan);
+			const matchTahun = filters.tahun.length === 0 || filters.tahun.includes(itemYear);
 			const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
 			const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
-			const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+			const matchKeperluan = filters.keperluan.length === 0 || filters.keperluan.includes(keperluan);
 			const matchNoAgenda = !filters.noAgenda || noAgenda.includes(filters.noAgenda.toLowerCase());
 			const matchSo = !filters.so || so.includes(filters.so.toLowerCase());
-			const matchStatusPembayaran = !filters.statusPembayaran || paymentStatus === filters.statusPembayaran;
+			const matchStatusPds = filters.statusPds.length === 0 || filters.statusPds.includes(statusPds);
+			const matchStatusBukti = filters.statusBukti.length === 0 || filters.statusBukti.includes(buktiStatus);
+			const matchStatusPembayaran = filters.statusPembayaran.length === 0 || filters.statusPembayaran.includes(paymentStatus);
 			const matchTanggalPembayaran = !filters.tanggalPembayaran || itemPaymentDate === filters.tanggalPembayaran;
 
 			return (
@@ -123,6 +130,8 @@ export default function AdminRiwayatPDSPage() {
 				matchKeperluan &&
 				matchNoAgenda &&
 				matchSo &&
+				matchStatusPds &&
+				matchStatusBukti &&
 				matchStatusPembayaran &&
 				matchTanggalPembayaran
 			);
@@ -144,8 +153,9 @@ export default function AdminRiwayatPDSPage() {
 		const totalVisit = filteredPds.length;
 		const totalNominal = filteredPds.reduce((total, item: any) => total + (Number(item.nominalPDS) || 0), 0);
 		const sudahDibayar = filteredPds.filter((item: any) => item.statusPembayaran === 'SUDAH_DIBAYAR').length;
+		const belumLengkap = filteredPds.filter((item: any) => item.status !== 'COMPLETED').length;
 
-		return { totalVisit, totalNominal, sudahDibayar };
+		return { totalVisit, totalNominal, sudahDibayar, belumLengkap };
 	}, [filteredPds]);
 
 	const formatRupiah = (value: number) => {
@@ -155,6 +165,35 @@ export default function AdminRiwayatPDSPage() {
 			minimumFractionDigits: 0,
 		}).format(value);
 	};
+
+	function getBuktiSummary(bukti: any[] = []) {
+		if (!bukti.length) {
+			return { key: 'BELUM_UPLOAD', label: 'Bukti Belum Upload', className: 'bg-gray-100 text-gray-600 border-gray-200' };
+		}
+
+		const statuses = bukti
+			.map((item) => String(item?.verificationStatus || '').toUpperCase().trim())
+			.filter(Boolean);
+
+		if (statuses.some((status) => status === 'DIREJECT')) {
+			return { key: 'PERLU_REVISI', label: 'Bukti Perlu Revisi', className: 'bg-rose-50 text-rose-700 border-rose-200' };
+		}
+
+		const allAccepted = statuses.length > 0 && statuses.every((status) => status === 'DITERIMA');
+		if (allAccepted) {
+			return { key: 'DITERIMA', label: 'Bukti Diterima', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+		}
+
+		return { key: 'MENUNGGU_VERIFIKASI', label: 'Menunggu Verifikasi', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+	}
+
+	function getPdsStatusSummary(status: string) {
+		if (status === 'COMPLETED') return { label: 'SELESAI', className: 'bg-green-50 text-teal-700' };
+		if (status === 'SUBMITTED') return { label: 'MENUNGGU VERIFIKASI', className: 'bg-blue-50 text-blue-700' };
+		if (status === 'APPROVED') return { label: 'DALAM PROSES', className: 'bg-yellow-50 text-yellow-700' };
+		if (status === 'WAITING_SECOND_APPROVAL') return { label: 'PENDING 1/2', className: 'bg-amber-50 text-amber-700' };
+		return { label: status || '-', className: 'bg-red-50 text-red-600' };
+	}
 
 	const openPaymentModal = (item: any) => {
 		setPaymentTarget(item);
@@ -262,6 +301,8 @@ export default function AdminRiwayatPDSPage() {
 				'No. Agenda': item.noAgenda || '-',
 				SO: item.so || '-',
 				'Visit Ke': item.visitKe || '-',
+				'Status PDS': getPdsStatusSummary(item.status).label,
+				'Status Bukti': getBuktiSummary(item.bukti || []).label,
 				'Status Pembayaran': item.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah Dibayar' : 'Belum Dibayar',
 				'Tanggal Pembayaran': formatDate(item.tanggalPembayaran),
 			};
@@ -308,10 +349,10 @@ export default function AdminRiwayatPDSPage() {
 
 		worksheet['!autofilter'] = { ref: worksheet['!ref'] || 'A1' };
 		const workbook = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat PDS');
+		XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap PDS');
 
 		const today = new Date().toISOString().slice(0, 10);
-		XLSX.writeFile(workbook, `riwayat-pds-${today}.xlsx`);
+		XLSX.writeFile(workbook, `rekap-pds-${today}.xlsx`);
 	};
 
 	const handleResetFilters = () => {
@@ -320,13 +361,17 @@ export default function AdminRiwayatPDSPage() {
 
 	return (
 		<div className="p-8 bg-[#f8f9fa] min-h-screen font-sans">
-			<h1 className="text-[40px] font-bold text-[#202c45] mb-8 tracking-tight">Riwayat PDS</h1>
+			<h1 className="text-[40px] font-bold text-[#202c45] mb-8 tracking-tight">Rekap PDS</h1>
 
 			<div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+				<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 					<div className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
 						<p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Jumlah Visit</p>
 						<p className="mt-1 text-3xl font-black text-blue-900">{summary.totalVisit.toLocaleString('id-ID')}</p>
+					</div>
+					<div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+						<p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Belum Selesai</p>
+						<p className="mt-1 text-3xl font-black text-amber-900">{summary.belumLengkap.toLocaleString('id-ID')}</p>
 					</div>
 					<div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
 						<p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Status Pembayaran</p>
@@ -363,9 +408,9 @@ export default function AdminRiwayatPDSPage() {
 								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
-								<SearchableFilterInput
-									id="riwayat-nama"
-									value={filters.nama}
+								<AdminFilterDropdown
+									label="Nama Surveyor"
+									selectedValues={filters.nama}
 									onChange={(value) => setFilters((prev) => ({ ...prev, nama: value }))}
 									placeholder="Semua Nama"
 									options={filterOptions.nama}
@@ -373,9 +418,9 @@ export default function AdminRiwayatPDSPage() {
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Lokasi</label>
-								<SearchableFilterInput
-									id="riwayat-lokasi"
-									value={filters.lokasi}
+								<AdminFilterDropdown
+									label="Lokasi"
+									selectedValues={filters.lokasi}
 									onChange={(value) => setFilters((prev) => ({ ...prev, lokasi: value }))}
 									placeholder="Semua Lokasi"
 									options={filterOptions.lokasi}
@@ -383,9 +428,9 @@ export default function AdminRiwayatPDSPage() {
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Jenis</label>
-								<SearchableFilterInput
-									id="riwayat-jenis"
-									value={filters.permohonan}
+								<AdminFilterDropdown
+									label="Jenis"
+									selectedValues={filters.permohonan}
 									onChange={(value) => setFilters((prev) => ({ ...prev, permohonan: value }))}
 									placeholder="Semua Jenis"
 									options={filterOptions.permohonan}
@@ -393,9 +438,9 @@ export default function AdminRiwayatPDSPage() {
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tahun</label>
-								<SearchableFilterInput
-									id="riwayat-tahun"
-									value={filters.tahun}
+								<AdminFilterDropdown
+									label="Tahun"
+									selectedValues={filters.tahun}
 									onChange={(value) => setFilters((prev) => ({ ...prev, tahun: value }))}
 									placeholder="Semua Tahun"
 									options={filterOptions.tahun}
@@ -403,9 +448,9 @@ export default function AdminRiwayatPDSPage() {
 							</div>
 							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan/Objek</label>
-								<SearchableFilterInput
-									id="riwayat-keperluan"
-									value={filters.keperluan}
+								<AdminFilterDropdown
+									label="Keperluan / Objek"
+									selectedValues={filters.keperluan}
 									onChange={(value) => setFilters((prev) => ({ ...prev, keperluan: value }))}
 									placeholder="Semua Keperluan/Objek"
 									options={filterOptions.keperluan}
@@ -437,10 +482,30 @@ export default function AdminRiwayatPDSPage() {
 								/>
 							</div>
 							<div>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Status PDS</label>
+								<AdminFilterDropdown
+									label="Status PDS"
+									selectedValues={filters.statusPds}
+									onChange={(value) => setFilters((prev) => ({ ...prev, statusPds: value }))}
+									placeholder="Semua Status PDS"
+									options={['APPROVED', 'SUBMITTED', 'COMPLETED']}
+								/>
+							</div>
+							<div>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Status Bukti</label>
+								<AdminFilterDropdown
+									label="Status Bukti"
+									selectedValues={filters.statusBukti}
+									onChange={(value) => setFilters((prev) => ({ ...prev, statusBukti: value }))}
+									placeholder="Semua Status Bukti"
+									options={['BELUM_UPLOAD', 'MENUNGGU_VERIFIKASI', 'PERLU_REVISI', 'DITERIMA']}
+								/>
+							</div>
+							<div>
 								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Status Pembayaran</label>
-								<SearchableFilterInput
-									id="riwayat-status-pembayaran"
-									value={filters.statusPembayaran}
+								<AdminFilterDropdown
+									label="Status Pembayaran"
+									selectedValues={filters.statusPembayaran}
 									onChange={(value) => setFilters((prev) => ({ ...prev, statusPembayaran: value }))}
 									placeholder="Semua Status Pembayaran"
 									options={['BELUM_DIBAYAR', 'SUDAH_DIBAYAR']}
@@ -495,7 +560,9 @@ export default function AdminRiwayatPDSPage() {
 								<th className="py-4 px-6">Keperluan/Objek</th>
 								<th className="py-4 px-6 text-center">No. Agenda</th>
 								<th className="py-4 px-6 text-center">No. SO</th>
+								<th className="py-4 px-6 text-center">Nominal</th>
 								<th className="py-4 px-6 text-center">Status</th>
+								<th className="py-4 px-6 text-center">Status Bukti</th>
 								<th className="py-4 px-6 text-center">Status Pembayaran</th>
 								<th className="py-4 px-6 text-center">Tanggal Pembayaran</th>
 								<th className="py-4 px-6 rounded-tr-2xl text-center">Action</th>
@@ -503,11 +570,14 @@ export default function AdminRiwayatPDSPage() {
 						</thead>
 						<tbody className="divide-y divide-gray-100">
 							{loading ? (
-								<tr><td colSpan={11} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
+								<tr><td colSpan={13} className="text-center py-20 text-gray-400">Memproses data BKI...</td></tr>
 							) : pagedPds.length === 0 ? (
-								<tr><td colSpan={11} className="text-center py-20 text-gray-400">Belum ada riwayat PDS selesai.</td></tr>
+								<tr><td colSpan={13} className="text-center py-20 text-gray-400">Belum ada PDS bernominal untuk direkap.</td></tr>
 							) : (
-								pagedPds.map((data: any) => (
+								pagedPds.map((data: any) => {
+									const statusPds = getPdsStatusSummary(data.status);
+									const statusBukti = getBuktiSummary(data.bukti || []);
+									return (
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
 										<td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
 										<td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
@@ -516,9 +586,15 @@ export default function AdminRiwayatPDSPage() {
 										<td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
 										<td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>
 										<td className="py-4 px-6 text-center font-semibold text-gray-700">{data.so || '-'}</td>
+										<td className="py-4 px-6 text-center font-black text-teal-700 whitespace-nowrap">{formatRupiah(Number(data.nominalPDS) || 0)}</td>
 										<td className="py-4 px-6 text-center">
-											<span className="px-6 py-1 rounded-full text-[10px] font-black tracking-widest bg-green-50 text-teal-700">
-												COMPLETE
+											<span className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest whitespace-nowrap ${statusPds.className}`}>
+												{statusPds.label}
+											</span>
+										</td>
+										<td className="py-4 px-6 text-center">
+											<span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold whitespace-nowrap ${statusBukti.className}`}>
+												{statusBukti.label}
 											</span>
 										</td>
 										<td className="py-4 px-6 text-center">
@@ -559,7 +635,8 @@ export default function AdminRiwayatPDSPage() {
 											</div>
 										</td>
 									</tr>
-								))
+									);
+								})
 							)}
 						</tbody>
 					</table>
@@ -687,37 +764,5 @@ export default function AdminRiwayatPDSPage() {
 				</div>
 			)}
 		</div>
-	);
-}
-
-function SearchableFilterInput({
-	id,
-	value,
-	onChange,
-	placeholder,
-	options,
-}: {
-	id: string;
-	value: string;
-	onChange: (value: string) => void;
-	placeholder: string;
-	options: string[];
-}) {
-	return (
-		<>
-			<input
-				type="search"
-				list={id}
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				placeholder={placeholder}
-				className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-			/>
-			<datalist id={id}>
-				{options.map((item) => (
-					<option key={item} value={item} />
-				))}
-			</datalist>
-		</>
 	);
 }

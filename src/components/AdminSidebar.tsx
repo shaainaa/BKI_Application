@@ -117,7 +117,7 @@ export default function AdminSidebar() {
                     isAdminPdsRiwayat ? 'bg-[#0A8E9A]' : 'bg-gray-400'
                   }`}
                 ></div>
-                Riwayat PDS
+                Rekap PDS
               </Link>
             </div>
           )}

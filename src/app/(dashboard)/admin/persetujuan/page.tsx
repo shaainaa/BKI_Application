@@ -53,6 +53,7 @@ import {
 } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
+import AdminFilterDropdown from '@/components/AdminFilterDropdown';
 
 type PdsAdminRow = Pds & {
   bukti?: BuktiPds[];
@@ -62,16 +63,16 @@ type PdsAdminRow = Pds & {
 };
 
 const DEFAULT_FILTERS = {
-  nama: '',
-  lokasi: '',
-  permohonan: '',
-  tahun: '',
+  nama: [] as string[],
+  lokasi: [] as string[],
+  permohonan: [] as string[],
+  tahun: [] as string[],
   tanggalMulai: '',
   tanggalAkhir: '',
-  keperluan: '',
+  keperluan: [] as string[],
   noAgenda: '',
-  status: '',
-  verifikasiBukti: '',
+  status: [] as string[],
+  verifikasiBukti: [] as string[],
 };
 
 const ADMIN_PDS_CACHE_TTL_MS = 15000;
@@ -202,10 +203,10 @@ export default function AdminPersetujuanPDS() {
 
   const filteredPds = useMemo(() => {
     return listPds.filter((item: Pds) => {
-      const namaUser = (item.user?.nama || item.user?.name || '').toLowerCase();
-      const lokasi = (item.lokasi || '').toLowerCase();
-      const permohonan = (item.permohonan || '').toLowerCase();
-      const keperluan = (item.keperluan || '').toLowerCase();
+      const namaUser = item.user?.nama || item.user?.name || '';
+      const lokasi = item.lokasi || '';
+      const permohonan = item.permohonan || '';
+      const keperluan = item.keperluan || '';
       const noAgenda = (item.noAgenda || '').toLowerCase();
       const status = (item.status || '').toUpperCase();
       const itemDate = formatDateInput(item.tanggalPengajuan || '');
@@ -219,16 +220,16 @@ export default function AdminPersetujuanPDS() {
         ? 'PERLU_REVISI'
         : 'DISETUJUI';
 
-      const matchNama = !filters.nama || namaUser === filters.nama.toLowerCase();
-      const matchLokasi = !filters.lokasi || lokasi === filters.lokasi.toLowerCase();
-      const matchPermohonan = !filters.permohonan || permohonan === filters.permohonan.toLowerCase();
-      const matchTahun = !filters.tahun || itemYear === filters.tahun;
+      const matchNama = filters.nama.length === 0 || filters.nama.includes(namaUser);
+      const matchLokasi = filters.lokasi.length === 0 || filters.lokasi.includes(lokasi);
+      const matchPermohonan = filters.permohonan.length === 0 || filters.permohonan.includes(permohonan);
+      const matchTahun = filters.tahun.length === 0 || filters.tahun.includes(itemYear);
       const matchTanggalMulai = !filters.tanggalMulai || itemDate >= filters.tanggalMulai;
       const matchTanggalAkhir = !filters.tanggalAkhir || itemDate <= filters.tanggalAkhir;
-      const matchKeperluan = !filters.keperluan || keperluan === filters.keperluan.toLowerCase();
+      const matchKeperluan = filters.keperluan.length === 0 || filters.keperluan.includes(keperluan);
       const matchNoAgenda = !filters.noAgenda || noAgenda.includes(filters.noAgenda.toLowerCase());
-      const matchStatus = !filters.status || status === filters.status;
-      const matchVerifikasiBukti = !filters.verifikasiBukti || verifikasiKey === filters.verifikasiBukti;
+      const matchStatus = filters.status.length > 0 ? filters.status.includes(status) : status !== 'COMPLETED';
+      const matchVerifikasiBukti = filters.verifikasiBukti.length === 0 || filters.verifikasiBukti.includes(verifikasiKey);
 
       return (
         matchNama &&
@@ -415,6 +416,50 @@ export default function AdminPersetujuanPDS() {
     }
   };
 
+  const buildAdminPayload = (status?: Pds['status']) => ({
+    id: selectedPds?.id,
+    ...(status ? { status } : {}),
+    nominal: nominalInput === '' ? null : Number(nominalInput) || 0,
+    so: editForm.so,
+    nomorPdsTrans: editForm.nomorPdsTrans,
+    noAgenda: editForm.noAgenda,
+    lokasi: editForm.lokasi,
+    keperluan: editForm.keperluan,
+    tglBerangkat: editForm.tglBerangkat,
+    jamBerangkat: editForm.jamBerangkat,
+    tglKembali: editForm.tglKembali,
+    jamKembali: editForm.jamKembali,
+    visitKe: editForm.visitKe,
+    keteranganVisit: editForm.keteranganVisit,
+  });
+
+  const handleSaveAdministrasi = async () => {
+    if (!selectedPds?.id) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/admin/pds', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildAdminPayload()),
+      });
+      const result = await res.json();
+
+      if (!result.success) {
+        alert(result.error || 'Gagal menyimpan data administrasi.');
+        return;
+      }
+
+      alert('Data administrasi berhasil disimpan. PDS akan muncul di Rekap PDS jika nominal sudah diisi.');
+      adminPdsCache = null;
+      await fetchAllPds({ force: true });
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSaveAndComplete = async () => {
     if (!selectedPds?.id) return;
 
@@ -427,20 +472,7 @@ export default function AdminPersetujuanPDS() {
     try {
       const admin = JSON.parse(localStorage.getItem('user') || '{}');
       const payload = {
-        id: selectedPds.id,
-        status: 'COMPLETED',
-        nominal: Number(nominalInput) || 0,
-        so: editForm.so,
-        nomorPdsTrans: editForm.nomorPdsTrans,
-        noAgenda: editForm.noAgenda,
-        lokasi: editForm.lokasi,
-        keperluan: editForm.keperluan,
-        tglBerangkat: editForm.tglBerangkat,
-        jamBerangkat: editForm.jamBerangkat,
-        tglKembali: editForm.tglKembali,
-        jamKembali: editForm.jamKembali,
-        visitKe: editForm.visitKe,
-        keteranganVisit: editForm.keteranganVisit,
+        ...buildAdminPayload('COMPLETED'),
         reviewNotes: reviewNotes.trim(),
         buktiUpdates: buktiDraft.map((item) => ({
           id: item.id,
@@ -509,9 +541,9 @@ export default function AdminPersetujuanPDS() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Nama Surveyor</label>
-                <SearchableFilterInput
-                  id="persetujuan-nama"
-                  value={filters.nama}
+                <AdminFilterDropdown
+                  label="Nama Surveyor"
+                  selectedValues={filters.nama}
                   onChange={(value) => setFilters((prev) => ({ ...prev, nama: value }))}
                   placeholder="Semua Nama"
                   options={filterOptions.nama}
@@ -519,9 +551,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Lokasi</label>
-                <SearchableFilterInput
-                  id="persetujuan-lokasi"
-                  value={filters.lokasi}
+                <AdminFilterDropdown
+                  label="Lokasi"
+                  selectedValues={filters.lokasi}
                   onChange={(value) => setFilters((prev) => ({ ...prev, lokasi: value }))}
                   placeholder="Semua Lokasi"
                   options={filterOptions.lokasi}
@@ -529,9 +561,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Jenis</label>
-                <SearchableFilterInput
-                  id="persetujuan-jenis"
-                  value={filters.permohonan}
+                <AdminFilterDropdown
+                  label="Jenis"
+                  selectedValues={filters.permohonan}
                   onChange={(value) => setFilters((prev) => ({ ...prev, permohonan: value }))}
                   placeholder="Semua Jenis"
                   options={filterOptions.permohonan}
@@ -539,9 +571,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tahun</label>
-                <SearchableFilterInput
-                  id="persetujuan-tahun"
-                  value={filters.tahun}
+                <AdminFilterDropdown
+                  label="Tahun"
+                  selectedValues={filters.tahun}
                   onChange={(value) => setFilters((prev) => ({ ...prev, tahun: value }))}
                   placeholder="Semua Tahun"
                   options={filterOptions.tahun}
@@ -549,9 +581,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Keperluan/Objek</label>
-                <SearchableFilterInput
-                  id="persetujuan-keperluan"
-                  value={filters.keperluan}
+                <AdminFilterDropdown
+                  label="Keperluan / Objek"
+                  selectedValues={filters.keperluan}
                   onChange={(value) => setFilters((prev) => ({ ...prev, keperluan: value }))}
                   placeholder="Semua Keperluan/Objek"
                   options={filterOptions.keperluan}
@@ -587,9 +619,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Verifikasi Bukti</label>
-                <SearchableFilterInput
-                  id="persetujuan-verifikasi"
-                  value={filters.verifikasiBukti}
+                <AdminFilterDropdown
+                  label="Verifikasi Bukti"
+                  selectedValues={filters.verifikasiBukti}
                   onChange={(value) => setFilters((prev) => ({ ...prev, verifikasiBukti: value }))}
                   placeholder="Semua Status"
                   options={['BELUM_UPLOAD', 'MENUNGGU_VERIFIKASI', 'PERLU_REVISI', 'DISETUJUI']}
@@ -597,9 +629,9 @@ export default function AdminPersetujuanPDS() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 mb-1">Status</label>
-                <SearchableFilterInput
-                  id="persetujuan-status"
-                  value={filters.status}
+                <AdminFilterDropdown
+                  label="Status"
+                  selectedValues={filters.status}
                   onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
                   placeholder="Semua Status"
                   options={['PENDING', 'WAITING_SECOND_APPROVAL', 'APPROVED', 'SUBMITTED', 'COMPLETED']}
@@ -753,7 +785,7 @@ export default function AdminPersetujuanPDS() {
               <XCircle size={30} />
             </button>
 
-            <h2 className="text-2xl font-black text-[#0A8E9A] mb-6 border-b border-gray-100 pb-3">Verifikasi Bukti & Finalisasi PDS</h2>
+            <h2 className="text-2xl font-black text-[#0A8E9A] mb-6 border-b border-gray-100 pb-3">Kelola PDS</h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-4">
@@ -863,6 +895,14 @@ export default function AdminPersetujuanPDS() {
                 </div>
 
                 <button
+                  onClick={handleSaveAdministrasi}
+                  disabled={isSaving}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-teal-300 bg-white text-teal-700 font-bold px-4 py-3 hover:bg-teal-50 disabled:opacity-60"
+                >
+                  <Save size={18} /> Simpan Data Administrasi
+                </button>
+
+                <button
                   onClick={handleSaveAndComplete}
                   disabled={isSaving}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A8E9A] text-white font-bold px-4 py-4 hover:bg-teal-700 disabled:opacity-60"
@@ -892,7 +932,6 @@ export default function AdminPersetujuanPDS() {
     </div>
   );
 }
-
 function Input({
   label,
   value,
@@ -914,37 +953,5 @@ function Input({
         className="w-full mt-1 bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
       />
     </div>
-  );
-}
-
-function SearchableFilterInput({
-  id,
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  options: string[];
-}) {
-  return (
-    <>
-      <input
-        type="search"
-        list={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="h-10 w-full border border-gray-300 rounded-xl px-3 bg-white text-gray-600 text-sm outline-none focus:border-teal-500"
-      />
-      <datalist id={id}>
-        {options.map((item) => (
-          <option key={item} value={item} />
-        ))}
-      </datalist>
-    </>
   );
 }
