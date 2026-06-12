@@ -21,7 +21,7 @@ export default function AdminSidebar() {
 
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/';
   const isUsersActive = pathname?.includes('/admin/pengguna');
-  const isReportsActive = pathname?.includes('/admin/reports');
+  const isReportsActive = pathname?.includes('/laporan');
   const isSettingsActive = pathname?.includes('/admin/settings');
 
   const isAdminPdsActive = pathname?.includes('/admin/persetujuan') || pathname?.includes('/admin/riwayatPDS');
@@ -125,7 +125,7 @@ export default function AdminSidebar() {
 
         {/* laporan */}
         <Link
-          href="/admin/reports"
+          href="/laporan"
           className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
             isReportsActive
               ? 'text-white bg-[#0A8E9A] shadow-sm'
