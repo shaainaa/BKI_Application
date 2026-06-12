@@ -9,7 +9,6 @@ import {
   Users,
   FileText,
   BarChart,
-  Settings,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
@@ -22,8 +21,6 @@ export default function AdminSidebar() {
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/';
   const isUsersActive = pathname?.includes('/admin/pengguna');
   const isReportsActive = pathname?.includes('/laporan');
-  const isSettingsActive = pathname?.includes('/admin/settings');
-
   const isAdminPdsActive = pathname?.includes('/admin/persetujuan') || pathname?.includes('/admin/riwayatPDS');
   const isAdminPdsList = pathname?.includes('/admin/persetujuan');
   const isAdminPdsRiwayat = pathname?.includes('/admin/riwayatPDS');
@@ -136,18 +133,6 @@ export default function AdminSidebar() {
           Laporan
         </Link>
 
-        {/* pengaturan */}
-        <Link
-          href="/admin/settings"
-          className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-            isSettingsActive
-              ? 'text-white bg-[#0A8E9A] shadow-sm'
-              : 'text-gray-700 hover:text-[#0A8E9A] hover:bg-teal-50'
-          }`}
-        >
-          <Settings size={20} />
-          Pengaturan
-        </Link>
       </nav>
     </aside>
   );
