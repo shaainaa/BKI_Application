@@ -7,36 +7,39 @@ import { X, Plus } from 'lucide-react';
 interface FormPermohonanModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanModalProps) {
+const initialFormData = {
+  namaSurveyor: '',
+  email: '',
+  permohonan: '',
+  lokasi: '',
+  keperluan: '',
+  nomorAgenda: '',
+  keberangkatan: '',
+  jamBerangkat: '',
+  kembali: '',
+  jamKembali: '',
+  visitKe: '',
+  keteranganVisit: '',
+  ttdDigital: null as File | null,
+};
+
+export default function FormPermohonanModal({ isOpen, onClose, onSuccess }: FormPermohonanModalProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    namaSurveyor: '',
-    email: '',
-    permohonan: '',
-    lokasi: '',
-    keperluan: '',
-    nomorAgenda: '',
-    keberangkatan: '',
-    jamBerangkat: '',
-    kembali: '',
-    jamKembali: '',
-    visitKe: '',
-    keteranganVisit: '',
-    ttdDigital: null as File | null,
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
     if (isOpen) {
       const userRaw = localStorage.getItem('user');
       if (userRaw) {
         const User = JSON.parse(userRaw);
-        setFormData((prev) => ({
-          ...prev,
+        setFormData({
+          ...initialFormData,
           namaSurveyor: User.nama || '',
           email: User.email || '',
-        }));
+        });
       }
     }
   }, [isOpen]);
@@ -97,11 +100,12 @@ export default function FormPermohonanModal({ isOpen, onClose }: FormPermohonanM
 
       if (result.success) {
         alert("Permohonan berhasil disimpan!");
+        onSuccess();
         onClose();
       } else {
         alert("Gagal:" + (result.message ||result.error));
       }
-    } catch (error) {
+    } catch {
       alert("Terjadi Kesalah koneksi database");
     } finally {
       setLoading(false);

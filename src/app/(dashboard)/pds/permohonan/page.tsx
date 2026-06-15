@@ -391,10 +391,8 @@ export default function PermohonanPDS() {
 
       <FormPermohonanModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          fetchInitialData(false);
-        }}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => fetchInitialData(false)}
       />
 
       {uploadPds && (

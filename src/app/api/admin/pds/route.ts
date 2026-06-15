@@ -4,6 +4,7 @@ import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
 import { deleteUploadThingByUrl } from '@/lib/uploadthing';
 import { requireAdmin } from '@/lib/session';
+import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
 
 type UpdateValue = unknown;
 
@@ -162,6 +163,8 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    await syncPdsToGoogleSheetQuietly('admin-pds-patch');
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, error: errorMessage(error) }, { status: 500 });
@@ -205,6 +208,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     await pds.destroy();
+
+    await syncPdsToGoogleSheetQuietly('admin-pds-delete');
 
     return NextResponse.json({ success: true, message: 'PDS berhasil dihapus' });
   } catch (error: unknown) {

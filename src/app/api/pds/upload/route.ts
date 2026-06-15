@@ -4,6 +4,7 @@ import BuktiPds from '@/models/BuktiPDS';
 import Pds from '@/models/Pds';
 import { deleteUploadThingByUrl, uploadOneToUploadThing } from '@/lib/uploadthing';
 import { requireAuth } from '@/lib/session';
+import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
 
 export async function POST(request: Request) {
   try {
@@ -147,6 +148,8 @@ export async function PATCH(request: Request) {
       status: 'SUBMITTED',
       buktiSubmittedAt: new Date(),
     });
+
+    await syncPdsToGoogleSheetQuietly('pds-submit-bukti');
 
     return NextResponse.json({ success: true, message: 'Bukti berhasil disubmit ke admin untuk diverifikasi' });
   } catch (error: unknown) {

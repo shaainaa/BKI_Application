@@ -2,6 +2,7 @@
     import  Pds  from '@/models/Pds';
     import { uploadOneToUploadThing } from '@/lib/uploadthing';
     import { requireAuth } from '@/lib/session';
+    import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
 
     export async function POST(req: NextRequest) {
         try {
@@ -85,6 +86,8 @@
                 ttdDigitalUrl: ttdUrl,
                 status: 'PENDING'
             });
+
+            await syncPdsToGoogleSheetQuietly('pds-create');
 
             return NextResponse.json({ success: true, pds: newPds });
             

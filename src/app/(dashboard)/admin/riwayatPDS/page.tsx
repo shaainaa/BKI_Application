@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Download, FileText, XCircle } from 'lucide-react';
+import { Check, FileText, XCircle } from 'lucide-react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { PdsTemplate } from '@/components/PdsTemplate';
 import AdminFilterDropdown from '@/components/AdminFilterDropdown';
@@ -258,103 +258,6 @@ export default function AdminRiwayatPDSPage() {
 		};
 	};
 
-	const getDayOnly = (dateString: string) => {
-		if (!dateString) return '-';
-		const date = new Date(dateString);
-		if (Number.isNaN(date.getTime())) return '-';
-		return String(date.getDate()).padStart(2, '0');
-	};
-
-	const handleExportExcel = async () => {
-		if (filteredPds.length === 0) {
-			alert('Tidak ada data untuk diexport.');
-			return;
-		}
-
-		if (filters.tanggalMulai && filters.tanggalAkhir && filters.tanggalMulai > filters.tanggalAkhir) {
-			alert('Tanggal pengajuan mulai tidak boleh lebih besar dari tanggal pengajuan akhir.');
-			return;
-		}
-
-		const exportData = [...filteredPds].sort(
-			(a: any, b: any) => new Date(a.tglBerangkat || a.tanggalPengajuan).getTime() - new Date(b.tglBerangkat || b.tanggalPengajuan).getTime()
-		);
-
-		const XLSX = await import('xlsx-js-style');
-
-		const excelRows = exportData.map((item: any) => {
-			const jenis = (item.permohonan || '').toUpperCase();
-			const { month, year } = getMonthAndYear(item.tanggalPengajuan);
-			const nomorPdsTrans = item.nomorPdsTrans || '-';
-
-			return {
-				'No. Transportasi': jenis === 'TRANSPORTASI' ? nomorPdsTrans : '-',
-				'No. PDS': jenis !== 'TRANSPORTASI' ? nomorPdsTrans : '-',
-				Bulan: month,
-				Tahun: year,
-				'Tanggal Berangkat': getDayOnly(item.tglBerangkat),
-				'Tanggal Kembali': getDayOnly(item.tglKembali),
-				Lokasi: item.lokasi || '-',
-				Nama: item.user?.nama || item.user?.name || '-',
-				Keperluan: item.keperluan || '-',
-				Nominal: item.nominalPDS || '-',
-				'No. Agenda': item.noAgenda || '-',
-				SO: item.so || '-',
-				'Visit Ke': item.visitKe || '-',
-				'Status PDS': getPdsStatusSummary(item.status).label,
-				'Status Bukti': getBuktiSummary(item.bukti || []).label,
-				'Status Pembayaran': item.statusPembayaran === 'SUDAH_DIBAYAR' ? 'Sudah Dibayar' : 'Belum Dibayar',
-				'Tanggal Pembayaran': formatDate(item.tanggalPembayaran),
-			};
-		});
-
-		const worksheet = XLSX.utils.json_to_sheet(excelRows);
-		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-		const headerStyle = {
-			font: { bold: true, color: { rgb: 'FFFFFF' } },
-			fill: { patternType: 'solid', fgColor: { rgb: '4B5563' } },
-			alignment: { horizontal: 'center', vertical: 'center' },
-			border: {
-				top: { style: 'thin', color: { rgb: '9CA3AF' } },
-				bottom: { style: 'thin', color: { rgb: '9CA3AF' } },
-				left: { style: 'thin', color: { rgb: '9CA3AF' } },
-				right: { style: 'thin', color: { rgb: '9CA3AF' } },
-			},
-		};
-		const cellBorder = {
-			top: { style: 'thin', color: { rgb: 'E5E7EB' } },
-			bottom: { style: 'thin', color: { rgb: 'E5E7EB' } },
-			left: { style: 'thin', color: { rgb: 'E5E7EB' } },
-			right: { style: 'thin', color: { rgb: 'E5E7EB' } },
-		};
-
-		for (let c = range.s.c; c <= range.e.c; c += 1) {
-			const address = XLSX.utils.encode_cell({ r: 0, c });
-			if (worksheet[address]) {
-				worksheet[address].s = headerStyle;
-			}
-		}
-
-		for (let r = range.s.r; r <= range.e.r; r += 1) {
-			for (let c = range.s.c; c <= range.e.c; c += 1) {
-				const address = XLSX.utils.encode_cell({ r, c });
-				if (worksheet[address]) {
-					worksheet[address].s = {
-						...(worksheet[address].s || {}),
-						border: cellBorder,
-					};
-				}
-			}
-		}
-
-		worksheet['!autofilter'] = { ref: worksheet['!ref'] || 'A1' };
-		const workbook = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap PDS');
-
-		const today = new Date().toISOString().slice(0, 10);
-		XLSX.writeFile(workbook, `rekap-pds-${today}.xlsx`);
-	};
-
 	const handleResetFilters = () => {
 		setFilters({ ...DEFAULT_FILTERS });
 	};
@@ -392,12 +295,6 @@ export default function AdminRiwayatPDSPage() {
 								className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
 							>
 								Reset
-							</button>
-							<button
-								onClick={handleExportExcel}
-								className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
-							>
-								<Download size={14} /> Export Excel
 							</button>
 						</div>
 					</div>
