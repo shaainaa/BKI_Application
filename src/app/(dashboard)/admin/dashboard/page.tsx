@@ -657,7 +657,7 @@ export default function AdminDashboardPage() {
 
 					<article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
 						<div className="mb-3 flex items-center justify-between">
-							<p className="text-sm font-semibold text-slate-800">Agenda Hari Ini</p>
+							<p className="text-sm font-semibold text-slate-800">Kegiatan Hari Ini</p>
 							<BadgeCheck className="text-slate-700" size={20} />
 						</div>
 						<p className="text-3xl font-black text-slate-900">{stats.agendaToday}</p>
@@ -805,7 +805,7 @@ export default function AdminDashboardPage() {
 							</p>
 
 							{agendaForSelectedMonth.length === 0 ? (
-								<p className="text-sm text-slate-500">Belum ada agenda di bulan ini.</p>
+								<p className="text-sm text-slate-500">Belum ada kegiatan di bulan ini.</p>
 							) : (
 								<div className="space-y-2">
 										{pagedAgendaForMonth.map((agenda) => {
@@ -919,7 +919,7 @@ export default function AdminDashboardPage() {
 					</div>
 
 					{agendaForSelectedDay.length === 0 ? (
-						<p className="text-sm text-slate-500">Belum ada agenda pada tanggal ini.</p>
+						<p className="text-sm text-slate-500">Belum ada kegiatan pada tanggal ini.</p>
 					) : (
 						<div className="space-y-2">
 							{agendaForSelectedDay.map((agenda) => (

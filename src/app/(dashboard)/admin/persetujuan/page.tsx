@@ -647,7 +647,6 @@ export default function AdminPersetujuanPDS() {
               <tr className="whitespace-nowrap">
                 <th className="py-4 px-6 rounded-tl-2xl">Nama Surveyor</th>
                 <th className="py-4 px-6">Lokasi</th>
-                <th className="py-4 px-6 text-center">Tanggal</th>
                 <th className="py-4 px-6 text-center">Jenis</th>
                 <th className="py-4 px-6">Keperluan/Objek</th>
                 <th className="py-4 px-6 text-center">No. Agenda</th>
@@ -672,7 +671,6 @@ export default function AdminPersetujuanPDS() {
                     <tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
                       <td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
-                      <td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
                       <td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
                       <td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
                       <td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>

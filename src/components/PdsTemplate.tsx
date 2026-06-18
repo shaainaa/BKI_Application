@@ -41,7 +41,7 @@ export const PdsTemplate = ({ data }: { data: any }) => (
       <View style={styles.header}>
         <Image src="/images/BKI.png " style={styles.logo} />
         <View style={styles.headerText}>
-          <Text style={styles.title}>FORM PERMINTAAN PEMBUATAN PDS</Text>
+          <Text style={styles.title}>FORM PERMINTAAN PEMBUATAN {data.permohonan}</Text>
           <Text style={styles.title}>CABANG UTAMA KLAS SURABAYA</Text>
         </View>
       </View>
