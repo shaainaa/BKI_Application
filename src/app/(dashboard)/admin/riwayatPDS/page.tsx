@@ -22,6 +22,12 @@ const DEFAULT_FILTERS = {
 	tanggalPembayaran: '',
 };
 
+type PdsSortItem = {
+	id?: number | string | null;
+	tglBerangkat?: string | Date | null;
+	tanggalPengajuan?: string | Date | null;
+};
+
 export default function AdminRiwayatPDSPage() {
 	const [listPds, setListPds] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -81,7 +87,7 @@ export default function AdminRiwayatPDSPage() {
 			new Set(
 				listPds
 					.map((item: any) => {
-						const d = new Date(item.tanggalPengajuan);
+						const d = new Date(item.tglBerangkat);
 						return Number.isNaN(d.getTime()) ? null : String(d.getFullYear());
 					})
 					.filter((value): value is string => Boolean(value))
@@ -92,6 +98,11 @@ export default function AdminRiwayatPDSPage() {
 	}, [listPds]);
 
 	const filteredPds = useMemo(() => {
+		const getDepartureTime = (item: PdsSortItem) => {
+			const date = new Date(item.tglBerangkat || '');
+			return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+		};
+
 		return listPds.filter((item: any) => {
 			const namaUser = item.user?.nama || item.user?.name || '';
 			const lokasi = item.lokasi || '';
@@ -99,7 +110,7 @@ export default function AdminRiwayatPDSPage() {
 			const keperluan = item.keperluan || '';
 			const noAgenda = (item.noAgenda || '').toLowerCase();
 			const so = (item.so || '').toLowerCase();
-			const itemDate = formatDateInput(item.tanggalPengajuan);
+			const itemDate = formatDateInput(item.tglBerangkat || '');
 			const itemPaymentDate = formatDateInput(item.tanggalPembayaran);
 			const paymentStatus = item.statusPembayaran || 'BELUM_DIBAYAR';
 			const statusPds = item.status || '';
@@ -135,6 +146,18 @@ export default function AdminRiwayatPDSPage() {
 				matchStatusPembayaran &&
 				matchTanggalPembayaran
 			);
+		}).sort((a: PdsSortItem, b: PdsSortItem) => {
+			const departureDiff = getDepartureTime(b) - getDepartureTime(a);
+			if (departureDiff !== 0) return departureDiff;
+
+			const submittedA = new Date(a.tanggalPengajuan || '').getTime();
+			const submittedB = new Date(b.tanggalPengajuan || '').getTime();
+			const submittedDiff =
+				(Number.isNaN(submittedB) ? 0 : submittedB) -
+				(Number.isNaN(submittedA) ? 0 : submittedA);
+			if (submittedDiff !== 0) return submittedDiff;
+
+			return Number(b.id || 0) - Number(a.id || 0);
 		});
 	}, [listPds, filters]);
 
@@ -414,7 +437,7 @@ export default function AdminRiwayatPDSPage() {
 								<p className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Tanggal</p>
 								<div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
 							<div>
-								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Mulai</label>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Berangkat Mulai</label>
 								<input
 									type="date"
 									value={filters.tanggalMulai}
@@ -423,7 +446,7 @@ export default function AdminRiwayatPDSPage() {
 								/>
 							</div>
 							<div>
-								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Pengajuan Akhir</label>
+								<label className="block text-[10px] font-semibold text-gray-500 mb-1">Tgl Berangkat Akhir</label>
 								<input
 									type="date"
 									value={filters.tanggalAkhir}
@@ -478,7 +501,7 @@ export default function AdminRiwayatPDSPage() {
 									<tr key={data.id} className="hover:bg-gray-50/80 transition-colors">
 										<td className="py-4 px-6 font-bold text-gray-900">{data.user?.nama || data.user?.name}</td>
 										<td className="py-4 px-6 uppercase font-medium">{data.lokasi}</td>
-										<td className="py-4 px-6 text-center">{formatDate(data.tanggalPengajuan)}</td>
+										<td className="py-4 px-6 text-center">{formatDate(data.tglBerangkat)}</td>
 										<td className="py-4 px-6 text-center uppercase">{data.permohonan || 'PDS'}</td>
 										<td className="py-4 px-6 max-w-[200px] truncate uppercase italic text-gray-500">{data.keperluan}</td>
 										<td className="py-4 px-6 text-center font-semibold text-gray-700">{data.noAgenda || '-'}</td>

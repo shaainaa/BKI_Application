@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     applyAssociations();
 
     const allPds = await Pds.findAll({
-      order: [['id', 'DESC']], // Gunakan ID dulu untuk tes
+      order: [['tglBerangkat', 'DESC'], ['tanggalPengajuan', 'DESC'], ['id', 'DESC']],
       include: [
         {
           model: User,
