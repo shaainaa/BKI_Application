@@ -3,6 +3,7 @@
     import { uploadOneToUploadThing } from '@/lib/uploadthing';
     import { requireAuth } from '@/lib/session';
     import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
+    import { errorResponse, validationError } from '@/lib/apiError';
 
     export async function POST(req: NextRequest) {
         try {
@@ -15,6 +16,8 @@
             const noAgenda = ((data.get('noAgenda') as string) || '').trim();
             const tglBerangkat = data.get('tglBerangkat') as string;
             const tglKembali = data.get('tglKembali') as string;
+            const visitKeRaw = data.get('visitKe');
+            const visitKe = Number(visitKeRaw);
 
             if (!tglBerangkat || !tglKembali) {
                 return NextResponse.json(
@@ -38,6 +41,10 @@
                     { success: false, message: 'Tanggal berangkat tidak boleh lebih besar dari tanggal kembali' },
                     { status: 400 }
                 );
+            }
+
+            if (!visitKeRaw || !Number.isInteger(visitKe) || visitKe <= 0) {
+                return validationError('Visit Ke wajib diisi dengan angka lebih dari 0.', 'visitKe');
             }
 
             const existingReturnDateConflicts = await Pds.findAll({
@@ -81,7 +88,7 @@
                 jamBerangkat: data.get('jamBerangkat') || null,
                 tglKembali,
                 jamKembali: data.get('jamKembali') || null,
-                visitKe: data.get('visitKe'),
+                visitKe,
                 keteranganVisit: (data.get('keteranganVisit') as string).toUpperCase(),
                 ttdDigitalUrl: ttdUrl,
                 status: 'PENDING'
@@ -93,9 +100,6 @@
             
         } catch (error: unknown) {
             console.error('Error processing PDS submission:', error);
-            const message = error instanceof Error
-                ? error.message
-                : 'An error occurred while processing the PDS submission.';
-            return NextResponse.json({ success: false, message }, { status: 500 });
+            return errorResponse(error, 'Gagal mengirim permohonan PDS.');
         }
     }

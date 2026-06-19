@@ -8,6 +8,7 @@ import {
   uploadOneToUploadThing,
 } from '@/lib/uploadthing';
 import { requireAdmin } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 let agendaSchemaReady: Promise<void> | null = null;
@@ -88,8 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: agenda });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal menambah agenda.');
   }
 }
 
@@ -191,8 +191,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: updatedAgenda });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memperbarui agenda.');
   }
 }
 
@@ -233,8 +232,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Agenda berhasil dihapus.' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal menghapus agenda.');
   }
 }
 
@@ -259,7 +257,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat agenda.');
   }
 }

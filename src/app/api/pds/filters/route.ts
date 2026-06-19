@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Pds from '@/models/Pds';
 import sequelize from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 type FilterRow = {
   lokasi?: string | null;
@@ -31,7 +32,6 @@ export async function GET(req: NextRequest) {
       keperluan: keperluan.map((item) => item.keperluan).filter(Boolean)
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat filter PDS.');
   }
 }

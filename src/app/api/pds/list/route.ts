@@ -3,6 +3,7 @@ import Pds from '@/models/Pds';
 import User from '@/models/User';
 import BuktiPds from '@/models/BuktiPDS';
 import { requireAuth } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 // GUNAKAN PENGECEKAN INI AGAR TIDAK DOUBLE ALIAS
 if (!Pds.associations.user) {
@@ -45,7 +46,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: listPds });
   } catch (error: unknown) {
     console.error("Error fetching PDS with User:", error);
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat daftar PDS.');
   }
 }

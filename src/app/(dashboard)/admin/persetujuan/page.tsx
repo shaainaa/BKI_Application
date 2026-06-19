@@ -202,6 +202,11 @@ export default function AdminPersetujuanPDS() {
   }, [listPds]);
 
   const filteredPds = useMemo(() => {
+    const getSubmissionTime = (item: Pds) => {
+      const date = new Date(item.tanggalPengajuan || '');
+      return Number.isNaN(date.getTime()) ? Number.MIN_SAFE_INTEGER : date.getTime();
+    };
+
     return listPds.filter((item: Pds) => {
       const namaUser = item.user?.nama || item.user?.name || '';
       const lokasi = item.lokasi || '';
@@ -243,6 +248,11 @@ export default function AdminPersetujuanPDS() {
         matchStatus &&
         matchVerifikasiBukti
       );
+    }).sort((a: Pds, b: Pds) => {
+      const submittedDiff = getSubmissionTime(b) - getSubmissionTime(a);
+      if (submittedDiff !== 0) return submittedDiff;
+
+      return Number(b.id || 0) - Number(a.id || 0);
     });
   }, [listPds, filters]);
 

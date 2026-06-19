@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 import User from '@/models/User';
 import { hashPassword } from '@/lib/password';
 import { requireAdmin } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,8 +18,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: users });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal mengambil daftar pengguna.');
   }
 }
 
@@ -97,8 +97,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal membuat akun surveyor.');
   }
 }
 
@@ -191,8 +190,7 @@ export async function PUT(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memperbarui akun surveyor.');
   }
 }
 
@@ -216,7 +214,6 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal menghapus akun surveyor.');
   }
 }

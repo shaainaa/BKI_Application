@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Agenda from '@/models/Agenda';
 import { requireAuth } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,8 +15,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat agenda pribadi.');
   }
 }
 
@@ -52,8 +52,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: agenda });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal menyimpan agenda pribadi.');
   }
 }
 
@@ -100,8 +99,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: agenda });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memperbarui agenda pribadi.');
   }
 }
 
@@ -130,7 +128,6 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Agenda pribadi berhasil dihapus.' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal menghapus agenda pribadi.');
   }
 }

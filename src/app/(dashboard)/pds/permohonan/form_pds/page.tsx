@@ -103,10 +103,10 @@ export default function FormPermohonanModal({ isOpen, onClose, onSuccess }: Form
         onSuccess();
         onClose();
       } else {
-        alert("Gagal:" + (result.message ||result.error));
+        alert(result.message || result.error || 'Permohonan gagal disimpan. Periksa kembali data yang diisi.');
       }
     } catch {
-      alert("Terjadi Kesalah koneksi database");
+      alert("Koneksi bermasalah. Coba lagi beberapa saat.");
     } finally {
       setLoading(false);
     }
@@ -240,7 +240,7 @@ export default function FormPermohonanModal({ isOpen, onClose, onSuccess }: Form
             <div className="flex flex-col gap-1">
               <label className="text-sm font-bold text-gray-800">Visit Ke</label>
               <input 
-                type="text" name="visitKe" value={formData.visitKe} onChange={handleChange}
+                type="number" min="1" step="1" name="visitKe" value={formData.visitKe} onChange={handleChange}
                 className="w-full bg-[#EEEEEE] border-none rounded-md px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Agenda from '@/models/Agenda';
 import AgendaLampiran from '@/models/AgendaLampiran';
 import { requireAuth } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +24,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat agenda.');
   }
 }

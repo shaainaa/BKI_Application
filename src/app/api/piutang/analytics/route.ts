@@ -3,6 +3,7 @@ import { QueryTypes } from 'sequelize';
 import sequelize from '@/lib/db';
 import { requireAdmin } from '@/lib/session';
 import { ensurePiutangSchema } from '@/models/Piutang';
+import { errorResponse } from '@/lib/apiError';
 
 export const runtime = 'nodejs';
 
@@ -107,8 +108,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Gagal memuat analytics piutang.';
     console.error('Piutang analytics failed:', error);
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Gagal memuat analytics piutang.');
   }
 }

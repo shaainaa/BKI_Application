@@ -5,6 +5,7 @@ import BuktiPds from '@/models/BuktiPDS';
 import { deleteUploadThingByUrl } from '@/lib/uploadthing';
 import { requireAdmin } from '@/lib/session';
 import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
+import { errorResponse, validationError } from '@/lib/apiError';
 
 type UpdateValue = unknown;
 
@@ -14,10 +15,6 @@ type BuktiUpdate = {
   verifiedBy?: string | null;
 };
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-}
-
 // --- SOLUSI AMPUH: PAKSA RELASI SETIAP KALI API DIPANGGIL ---
 function applyAssociations() {
   if (!Pds.associations.user) {
@@ -26,6 +23,26 @@ function applyAssociations() {
   if (!Pds.associations.bukti) {
     Pds.hasMany(BuktiPds, { foreignKey: 'pdsId', as: 'bukti' });
   }
+}
+
+function parseOptionalDecimal(value: unknown, label: string, field: string) {
+  if (value === null || typeof value === 'undefined' || value === '') return null;
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return validationError(`${label} wajib berupa angka yang valid.`, field);
+  }
+
+  return parsed;
+}
+
+function parseRequiredInteger(value: unknown, label: string, field: string) {
+  const parsed = Number(value);
+  if (value === null || typeof value === 'undefined' || value === '' || !Number.isInteger(parsed) || parsed <= 0) {
+    return validationError(`${label} wajib diisi dengan angka lebih dari 0.`, field);
+  }
+
+  return parsed;
 }
 
 export async function GET(req: NextRequest) {
@@ -55,9 +72,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: allPds });
   } catch (error: unknown) {
-    const message = errorMessage(error);
-    console.error("Error Get Admin PDS:", message);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error("Error Get Admin PDS:", error);
+    return errorResponse(error, 'Gagal memuat data PDS.');
   }
 }
 
@@ -96,7 +112,11 @@ export async function PATCH(req: NextRequest) {
     const updatePayload: Record<string, UpdateValue> = {};
 
     if (typeof status !== 'undefined') updatePayload.status = status;
-    if (typeof nominal !== 'undefined') updatePayload.nominalPDS = nominal;
+    if (typeof nominal !== 'undefined') {
+      const parsedNominal = parseOptionalDecimal(nominal, 'Nominal PDS', 'nominal');
+      if (parsedNominal instanceof NextResponse) return parsedNominal;
+      updatePayload.nominalPDS = parsedNominal;
+    }
     if (typeof so !== 'undefined') updatePayload.so = so;
     if (typeof nomorPdsTrans !== 'undefined') updatePayload.nomorPdsTrans = nomorPdsTrans;
     if (typeof statusPembayaran !== 'undefined') updatePayload.statusPembayaran = statusPembayaran;
@@ -108,7 +128,11 @@ export async function PATCH(req: NextRequest) {
     if (typeof jamBerangkat !== 'undefined') updatePayload.jamBerangkat = jamBerangkat;
     if (typeof tglKembali !== 'undefined') updatePayload.tglKembali = tglKembali;
     if (typeof jamKembali !== 'undefined') updatePayload.jamKembali = jamKembali;
-    if (typeof visitKe !== 'undefined') updatePayload.visitKe = visitKe;
+    if (typeof visitKe !== 'undefined') {
+      const parsedVisitKe = parseRequiredInteger(visitKe, 'Visit Ke', 'visitKe');
+      if (parsedVisitKe instanceof NextResponse) return parsedVisitKe;
+      updatePayload.visitKe = parsedVisitKe;
+    }
     if (typeof keteranganVisit !== 'undefined') updatePayload.keteranganVisit = keteranganVisit;
     if (typeof permohonan !== 'undefined') updatePayload.permohonan = permohonan;
 
@@ -167,7 +191,8 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    return NextResponse.json({ success: false, error: errorMessage(error) }, { status: 500 });
+    console.error('Gagal memperbarui PDS:', error);
+    return errorResponse(error, 'Gagal memperbarui data PDS.');
   }
 }
 
@@ -213,6 +238,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'PDS berhasil dihapus' });
   } catch (error: unknown) {
-    return NextResponse.json({ success: false, error: errorMessage(error) }, { status: 500 });
+    console.error('Gagal menghapus PDS:', error);
+    return errorResponse(error, 'Gagal menghapus PDS.');
   }
 }

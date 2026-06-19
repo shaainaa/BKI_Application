@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/session';
 import { syncPdsToGoogleSheet } from '@/lib/pdsGoogleSheet';
+import { errorResponse } from '@/lib/apiError';
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +11,6 @@ export async function POST(req: Request) {
     const result = await syncPdsToGoogleSheet();
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Sinkronisasi Google Sheet gagal.';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Sinkronisasi Google Sheet gagal.');
   }
 }

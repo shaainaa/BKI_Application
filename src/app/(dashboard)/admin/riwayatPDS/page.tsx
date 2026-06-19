@@ -100,7 +100,7 @@ export default function AdminRiwayatPDSPage() {
 	const filteredPds = useMemo(() => {
 		const getDepartureTime = (item: PdsSortItem) => {
 			const date = new Date(item.tglBerangkat || '');
-			return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+			return Number.isNaN(date.getTime()) ? Number.MIN_SAFE_INTEGER : date.getTime();
 		};
 
 		return listPds.filter((item: any) => {

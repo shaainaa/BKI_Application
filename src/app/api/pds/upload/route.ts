@@ -5,6 +5,7 @@ import Pds from '@/models/Pds';
 import { deleteUploadThingByUrl, uploadOneToUploadThing } from '@/lib/uploadthing';
 import { requireAuth } from '@/lib/session';
 import { syncPdsToGoogleSheetQuietly } from '@/lib/pdsGoogleSheet';
+import { errorResponse } from '@/lib/apiError';
 
 export async function POST(request: Request) {
   try {
@@ -92,8 +93,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: "File berhasil diupload dan disimpan di database!", data: savedBukti });
   } catch (error: unknown) {
     console.error("❌ === ERROR TERJADI DI SERVER === ❌", error);
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Gagal mengupload bukti.');
   }
 }
 
@@ -154,7 +154,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true, message: 'Bukti berhasil disubmit ke admin untuk diverifikasi' });
   } catch (error: unknown) {
     console.error('Submit bukti gagal:', error);
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan pada server.';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Gagal submit bukti.');
   }
 }

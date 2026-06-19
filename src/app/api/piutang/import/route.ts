@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx-js-style';
 import sequelize from '@/lib/db';
 import { requireAdmin } from '@/lib/session';
 import { Customer, CustomerInvoice, CustomerObject, ensurePiutangSchema } from '@/models/Piutang';
+import { errorResponse } from '@/lib/apiError';
 
 export const runtime = 'nodejs';
 
@@ -189,8 +190,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, processed });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Gagal memproses file POSTAG.';
     console.error('POSTAG import failed:', error);
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(error, 'Gagal memproses file POSTAG.');
   }
 }

@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 import User from '@/models/User';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { requireAuth } from '@/lib/session';
+import { errorResponse } from '@/lib/apiError';
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,8 +30,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal mengambil profil.');
   }
 }
 
@@ -121,7 +121,6 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan server.';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return errorResponse(error, 'Gagal memperbarui profil.');
   }
 }
