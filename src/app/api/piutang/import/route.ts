@@ -19,7 +19,6 @@ const REQUIRED_COLUMNS = [
   'Saldo',
 ] as const;
 
-const CUT_OFF_DATE = new Date('2026-05-06T00:00:00.000Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 type RequiredColumn = typeof REQUIRED_COLUMNS[number];
@@ -66,13 +65,18 @@ function toDateOnly(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 }
 
-function getAgingDays(postingDate: string | null, saldo: number) {
+function getTodayCutOffDate() {
+  const today = new Date();
+  return new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+}
+
+function getAgingDays(postingDate: string | null, saldo: number, cutOffDate: Date) {
   if (saldo === 0 || !postingDate) return 0;
 
   const posting = new Date(`${postingDate}T00:00:00.000Z`);
   if (Number.isNaN(posting.getTime())) return 0;
 
-  return Math.max(0, Math.floor((CUT_OFF_DATE.getTime() - posting.getTime()) / DAY_MS));
+  return Math.max(0, Math.floor((cutOffDate.getTime() - posting.getTime()) / DAY_MS));
 }
 
 function getRiskCategory(saldo: number, agingDays: number) {
@@ -132,6 +136,7 @@ export async function POST(req: NextRequest) {
     }
 
     let processed = 0;
+    const cutOffDate = getTodayCutOffDate();
 
     await sequelize.transaction(async (transaction) => {
       for (const rawRow of rows) {
@@ -150,7 +155,7 @@ export async function POST(req: NextRequest) {
         const saldo = parseMoney(row.Saldo);
         const documentDate = toDateOnly(row['Document Date']);
         const postingDate = toDateOnly(row['Posting Date']);
-        const agingDays = getAgingDays(postingDate, saldo);
+        const agingDays = getAgingDays(postingDate, saldo, cutOffDate);
         const kategoriRisiko = getRiskCategory(saldo, agingDays);
         const statusPelunasan = getRepaymentStatus(tagihan, angsuran, saldo);
 
