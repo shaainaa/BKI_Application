@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx-js-style';
+import { Op } from 'sequelize';
 import sequelize from '@/lib/db';
 import { requireAdmin } from '@/lib/session';
 import { Customer, CustomerInvoice, CustomerObject, ensurePiutangSchema } from '@/models/Piutang';
@@ -20,9 +21,24 @@ const REQUIRED_COLUMNS = [
 ] as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const BATCH_SIZE = 500;
 
 type RequiredColumn = typeof REQUIRED_COLUMNS[number];
 type RawPostagRow = Record<RequiredColumn, unknown>;
+type NormalizedPostagRow = {
+  customerNumber: string;
+  namaPerusahaan: string;
+  namaObjek: string;
+  invoiceNumber: string;
+  documentDate: string | null;
+  postingDate: string | null;
+  tagihan: number;
+  angsuran: number;
+  saldo: number;
+  agingDays: number;
+  kategoriRisiko: string;
+  statusPelunasan: string;
+};
 
 function sanitizeText(value: unknown) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -99,6 +115,18 @@ function validateColumns(row: Record<string, unknown> | undefined) {
   return REQUIRED_COLUMNS.filter((column) => !(column in row));
 }
 
+function chunk<T>(items: T[], size = BATCH_SIZE) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function getObjectKey(customerNumber: string, namaObjek: string) {
+  return `${customerNumber}\u0000${namaObjek}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { response } = await requireAdmin(req);
@@ -135,65 +163,140 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let processed = 0;
     const cutOffDate = getTodayCutOffDate();
+    const normalizedRows: NormalizedPostagRow[] = rows.map((rawRow, index) => {
+      const row = rawRow as RawPostagRow;
+      const customerNumber = sanitizeText(row['Customer Number']);
+      const namaPerusahaan = sanitizeText(row['Nama Perusahaan']);
+      const namaObjek = sanitizeText(row['Object Name']);
+      const invoiceNumber = sanitizeText(row['Invoice Cetak']);
+
+      if (!customerNumber || !namaPerusahaan || !namaObjek || !invoiceNumber) {
+        throw new Error(`Data wajib kosong pada baris ${index + 2}.`);
+      }
+
+      const tagihan = parseMoney(row.Tagihan);
+      const angsuran = parseMoney(row.Angsuran);
+      const saldo = parseMoney(row.Saldo);
+      const documentDate = toDateOnly(row['Document Date']);
+      const postingDate = toDateOnly(row['Posting Date']);
+      const agingDays = getAgingDays(postingDate, saldo, cutOffDate);
+
+      return {
+        customerNumber,
+        namaPerusahaan,
+        namaObjek,
+        invoiceNumber,
+        documentDate,
+        postingDate,
+        tagihan,
+        angsuran,
+        saldo,
+        agingDays,
+        kategoriRisiko: getRiskCategory(saldo, agingDays),
+        statusPelunasan: getRepaymentStatus(tagihan, angsuran, saldo),
+      };
+    });
+
+    const customers = Array.from(
+      normalizedRows.reduce((map, row) => {
+        map.set(row.customerNumber, {
+          customer_number: row.customerNumber,
+          nama_perusahaan: row.namaPerusahaan,
+        });
+        return map;
+      }, new Map<string, { customer_number: string; nama_perusahaan: string }>())
+        .values()
+    );
+
+    const objects = Array.from(
+      normalizedRows.reduce((map, row) => {
+        map.set(getObjectKey(row.customerNumber, row.namaObjek), {
+          customer_number: row.customerNumber,
+          nama_objek: row.namaObjek,
+        });
+        return map;
+      }, new Map<string, { customer_number: string; nama_objek: string }>())
+        .values()
+    );
 
     await sequelize.transaction(async (transaction) => {
-      for (const rawRow of rows) {
-        const row = rawRow as RawPostagRow;
-        const customerNumber = sanitizeText(row['Customer Number']);
-        const namaPerusahaan = sanitizeText(row['Nama Perusahaan']);
-        const namaObjek = sanitizeText(row['Object Name']);
-        const invoiceNumber = sanitizeText(row['Invoice Cetak']);
+      for (const customerBatch of chunk(customers)) {
+        await Customer.bulkCreate(customerBatch, {
+          updateOnDuplicate: ['nama_perusahaan'],
+          transaction,
+        });
+      }
 
-        if (!customerNumber || !namaPerusahaan || !namaObjek || !invoiceNumber) {
-          throw new Error(`Data wajib kosong pada baris ${processed + 2}.`);
-        }
+      for (const objectBatch of chunk(objects)) {
+        await CustomerObject.bulkCreate(objectBatch, {
+          ignoreDuplicates: true,
+          transaction,
+        });
+      }
 
-        const tagihan = parseMoney(row.Tagihan);
-        const angsuran = parseMoney(row.Angsuran);
-        const saldo = parseMoney(row.Saldo);
-        const documentDate = toDateOnly(row['Document Date']);
-        const postingDate = toDateOnly(row['Posting Date']);
-        const agingDays = getAgingDays(postingDate, saldo, cutOffDate);
-        const kategoriRisiko = getRiskCategory(saldo, agingDays);
-        const statusPelunasan = getRepaymentStatus(tagihan, angsuran, saldo);
-
-        await Customer.upsert({
-          customer_number: customerNumber,
-          nama_perusahaan: namaPerusahaan,
-        }, { transaction });
-
-        const [customerObject] = await CustomerObject.findOrCreate({
+      const objectIdByKey = new Map<string, number>();
+      for (const objectBatch of chunk(objects)) {
+        const foundObjects = await CustomerObject.findAll({
           where: {
-            customer_number: customerNumber,
-            nama_objek: namaObjek,
-          },
-          defaults: {
-            customer_number: customerNumber,
-            nama_objek: namaObjek,
+            [Op.or]: objectBatch.map((item) => ({
+              customer_number: item.customer_number,
+              nama_objek: item.nama_objek,
+            })),
           },
           transaction,
         });
 
-        await CustomerInvoice.upsert({
-          invoice_number: invoiceNumber,
-          object_id: customerObject.getDataValue('object_id'),
-          document_date: documentDate,
-          posting_date: postingDate,
-          nominal_tagihan: tagihan,
-          nominal_angsuran: angsuran,
-          saldo_piutang: saldo,
-          umur_piutang_hari: agingDays,
-          kategori_risiko: kategoriRisiko,
-          status_pelunasan: statusPelunasan,
-        }, { transaction });
+        for (const item of foundObjects) {
+          objectIdByKey.set(
+            getObjectKey(
+              String(item.getDataValue('customer_number')),
+              String(item.getDataValue('nama_objek'))
+            ),
+            Number(item.getDataValue('object_id'))
+          );
+        }
+      }
 
-        processed += 1;
+      const invoices = normalizedRows.map((row) => {
+        const objectId = objectIdByKey.get(getObjectKey(row.customerNumber, row.namaObjek));
+        if (!objectId) {
+          throw new Error(`Objek pelanggan tidak ditemukan untuk invoice ${row.invoiceNumber}.`);
+        }
+
+        return {
+          invoice_number: row.invoiceNumber,
+          object_id: objectId,
+          document_date: row.documentDate,
+          posting_date: row.postingDate,
+          nominal_tagihan: row.tagihan,
+          nominal_angsuran: row.angsuran,
+          saldo_piutang: row.saldo,
+          umur_piutang_hari: row.agingDays,
+          kategori_risiko: row.kategoriRisiko,
+          status_pelunasan: row.statusPelunasan,
+        };
+      });
+
+      for (const invoiceBatch of chunk(invoices)) {
+        await CustomerInvoice.bulkCreate(invoiceBatch, {
+          updateOnDuplicate: [
+            'object_id',
+            'document_date',
+            'posting_date',
+            'nominal_tagihan',
+            'nominal_angsuran',
+            'saldo_piutang',
+            'umur_piutang_hari',
+            'kategori_risiko',
+            'status_pelunasan',
+          ],
+          transaction,
+        });
       }
     });
 
-    return NextResponse.json({ success: true, processed });
+    return NextResponse.json({ success: true, processed: normalizedRows.length });
   } catch (error) {
     console.error('POSTAG import failed:', error);
     return errorResponse(error, 'Gagal memproses file POSTAG.');

@@ -12,6 +12,20 @@ type ImportExcelProps = {
   onImported?: () => void;
 };
 
+async function readJsonResponse(response: Response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    success: false,
+    message: text.trim() || `Server mengembalikan status ${response.status}.`,
+  };
+}
+
 export default function ImportExcel({ onImported }: ImportExcelProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -37,10 +51,14 @@ export default function ImportExcel({ onImported }: ImportExcelProps) {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
+      const result = await readJsonResponse(response);
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'File POSTAG tidak dapat diproses.');
+        const fallbackMessage = response.status === 504
+          ? 'Import POSTAG melebihi batas waktu server. Coba file yang lebih kecil atau hubungi admin.'
+          : 'File POSTAG tidak dapat diproses.';
+
+        throw new Error(result.message || fallbackMessage);
       }
 
       setToast({
