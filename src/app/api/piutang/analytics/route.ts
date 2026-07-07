@@ -141,8 +141,7 @@ export async function GET(req: NextRequest) {
           ELSE 4
         END DESC,
         i.saldo_piutang DESC,
-        c.nama_perusahaan ASC
-      LIMIT 1000`,
+        c.nama_perusahaan ASC`,
       { type: QueryTypes.SELECT }
     );
 

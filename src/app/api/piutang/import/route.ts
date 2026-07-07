@@ -278,19 +278,13 @@ export async function POST(req: NextRequest) {
         };
       });
 
+      await CustomerInvoice.destroy({
+        where: {},
+        transaction,
+      });
+
       for (const invoiceBatch of chunk(invoices)) {
         await CustomerInvoice.bulkCreate(invoiceBatch, {
-          updateOnDuplicate: [
-            'object_id',
-            'document_date',
-            'posting_date',
-            'nominal_tagihan',
-            'nominal_angsuran',
-            'saldo_piutang',
-            'umur_piutang_hari',
-            'kategori_risiko',
-            'status_pelunasan',
-          ],
           transaction,
         });
       }
