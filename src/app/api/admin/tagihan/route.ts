@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/session';
 import { deleteUploadThingByUrl, uploadOneToUploadThing } from '@/lib/uploadthing';
 
 const VALID_STATUSES = ['MENUNGGU_EVALUASI', 'DISETUJUI', 'PERLU_REVISI', 'DITOLAK', 'SELESAI'];
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 
 function applyAssociations() {
   if (!Tagihan.associations.creator) {
@@ -28,6 +29,11 @@ function parseNominal(value: FormDataEntryValue | null) {
     return validationError('Nominal wajib berupa angka yang valid.', 'nominal');
   }
   return parsed;
+}
+
+function validateUploadSize(file: File | null, field: string, label: string) {
+  if (!file || file.size <= MAX_UPLOAD_SIZE_BYTES) return null;
+  return validationError(`${label} maksimal 5 MB.`, field);
 }
 
 export async function GET(req: NextRequest) {
@@ -78,6 +84,9 @@ export async function POST(req: NextRequest) {
     if (!invoiceFile || invoiceFile.size === 0) {
       return validationError('File invoice wajib diupload.', 'invoiceFile');
     }
+
+    const invoiceSizeError = validateUploadSize(invoiceFile, 'invoiceFile', 'File invoice');
+    if (invoiceSizeError) return invoiceSizeError;
 
     const invoiceFileUrl = await uploadOneToUploadThing(invoiceFile);
 
@@ -155,6 +164,9 @@ export async function PATCH(req: NextRequest) {
       let paymentProofName = tagihan.get('paymentProofName') as string | null;
 
       if (paymentProof && paymentProof.size > 0) {
+        const proofSizeError = validateUploadSize(paymentProof, 'paymentProof', 'Bukti pembayaran');
+        if (proofSizeError) return proofSizeError;
+
         await deleteUploadThingByUrl(paymentProofUrl);
         paymentProofUrl = await uploadOneToUploadThing(paymentProof);
         paymentProofName = paymentProof.name;
