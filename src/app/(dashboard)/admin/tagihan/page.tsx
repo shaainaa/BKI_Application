@@ -69,7 +69,6 @@ const INITIAL_FORM = {
 };
 
 const STATUS_OPTIONS: TagihanStatus[] = ['MENUNGGU_EVALUASI', 'DISETUJUI', 'PERLU_REVISI', 'DITOLAK', 'SELESAI'];
-const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 
 const DEFAULT_FILTERS = {
   vendor: [] as string[],
@@ -326,14 +325,6 @@ export default function AdminTagihanPage() {
     }
   };
 
-  const validateSelectedFile = (file: File | null) => {
-    if (!file) return true;
-    if (file.size <= MAX_UPLOAD_SIZE_BYTES) return true;
-
-    alert('Ukuran file maksimal 5 MB.');
-    return false;
-  };
-
   const handleDelete = async (item: Tagihan) => {
     const ok = confirm(`Hapus tagihan ${item.nomorInvoice}? File invoice dan bukti pembayaran akan ikut dihapus.`);
     if (!ok) return;
@@ -372,6 +363,9 @@ export default function AdminTagihanPage() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
         <SummaryCard label="Total Tagihan" value={formatRupiah(summary.totalNominal)} color="blue" />
+        <SummaryCard label="Menunggu Evaluasi" value={summary.waiting.toLocaleString('id-ID')} color="amber" />
+        <SummaryCard label="Belum Dibayar" value={summary.unpaid.toLocaleString('id-ID')} color="rose" />
+        <SummaryCard label="Selesai" value={summary.done.toLocaleString('id-ID')} color="emerald" />
       </div>
 
       <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-sm">
@@ -561,7 +555,7 @@ export default function AdminTagihanPage() {
               <Input label="Tanggal Invoice" type="date" value={form.tanggalInvoice} onChange={(value) => setForm({ ...form, tanggalInvoice: value })} required />
               <Input label="Tanggal Diterima" type="date" value={form.tanggalDiterima} onChange={(value) => setForm({ ...form, tanggalDiterima: value })} required />
               <Input label="Tanggal Jatuh Tempo" type="date" value={form.tanggalJatuhTempo} onChange={(value) => setForm({ ...form, tanggalJatuhTempo: value })} />
-              <FileInput label="File Invoice" onChange={setInvoiceFile} validateFile={validateSelectedFile} />
+              <FileInput label="File Invoice" onChange={setInvoiceFile} />
             </div>
             <Textarea label="Keterangan" value={form.keterangan} onChange={(value) => setForm({ ...form, keterangan: value })} />
             <button disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0A8E9A] px-4 py-3 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-60">
@@ -603,7 +597,7 @@ export default function AdminTagihanPage() {
             <InvoiceSnapshot item={paymentTarget} formatDate={formatDate} formatRupiah={formatRupiah} />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input label="Tanggal Pembayaran" type="date" value={paymentDate} onChange={setPaymentDate} required />
-              <FileInput label="Bukti Pembayaran" onChange={setPaymentProof} validateFile={validateSelectedFile} />
+              <FileInput label="Bukti Pembayaran" onChange={setPaymentProof} />
             </div>
             <Textarea label="Catatan Pembayaran" value={paymentNotes} onChange={setPaymentNotes} />
             <button onClick={submitPayment} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60">
@@ -824,33 +818,16 @@ function Textarea({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
-function FileInput({
-  label,
-  onChange,
-  validateFile,
-}: {
-  label: string;
-  onChange: (file: File | null) => void;
-  validateFile?: (file: File | null) => boolean;
-}) {
+function FileInput({ label, onChange }: { label: string; onChange: (file: File | null) => void }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-bold uppercase text-gray-500">{label}</span>
       <input
         type="file"
         accept=".pdf,.jpg,.jpeg,.png,.webp"
-        onChange={(event) => {
-          const file = event.target.files?.[0] || null;
-          if (validateFile && !validateFile(file)) {
-            event.target.value = '';
-            onChange(null);
-            return;
-          }
-          onChange(file);
-        }}
+        onChange={(event) => onChange(event.target.files?.[0] || null)}
         className="block h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3 file:py-1 file:text-xs file:font-bold file:text-teal-700"
       />
-      <span className="mt-1 block text-[11px] font-semibold text-gray-400">Maksimal 5 MB</span>
     </label>
   );
 }
